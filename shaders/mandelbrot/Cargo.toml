@@ -1,5 +1,5 @@
 [package]
-name = "simplest-shader"
+name = "mandelbrot"
 version = "0.0.0"
 publish = false
 authors.workspace = true
