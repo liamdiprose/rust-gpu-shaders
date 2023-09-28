@@ -4,6 +4,11 @@ pub mod complex;
 
 use bytemuck::{Pod, Zeroable};
 
+// Note: This cfg is incorrect on its surface, it really should be "are we compiling with std", but
+// we tie #[no_std] above to the same condition, so it's fine.
+#[cfg(target_arch = "spirv")]
+pub use spirv_std::num_traits::Float;
+
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
 pub struct ShaderConstants {
@@ -17,6 +22,9 @@ pub struct ShaderConstants {
     pub drag_start_y: f32,
     pub drag_end_x: f32,
     pub drag_end_y: f32,
+    pub zoom: f32,
+    pub translate_x: f32,
+    pub translate_y: f32,
 
     /// Bit mask of the pressed buttons (0 = Left, 1 = Middle, 2 = Right).
     pub mouse_button_pressed: u32,

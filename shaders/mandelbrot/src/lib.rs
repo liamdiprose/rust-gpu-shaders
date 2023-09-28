@@ -11,10 +11,13 @@ pub fn main_fs(
     #[spirv(push_constant)] constants: &ShaderConstants,
     output: &mut Vec4,
 ) {
-    let coord = vec2(frag_coord.x, frag_coord.y);
+    let coord = vec2(
+        frag_coord.x + constants.translate_x + (constants.drag_start_x - constants.drag_end_x),
+        frag_coord.y + constants.translate_y + (constants.drag_start_y - constants.drag_end_y),
+    );
 
-    let uv = 2.0
-        * (coord - vec2(constants.width as f32 * 0.75, constants.height as f32 * 0.5))
+    let uv = 1.2_f32.powf(constants.zoom)
+        * (coord - vec2(constants.width as f32 * 0.5, constants.height as f32 * 0.5))
         / constants.height as f32;
 
     let mut z = Vec2::ZERO;
