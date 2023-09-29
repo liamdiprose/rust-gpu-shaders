@@ -16,7 +16,7 @@ pub fn main_fs(
         frag_coord.y + constants.translate_y + (constants.drag_start_y - constants.drag_end_y),
     );
 
-    let uv = 1.2_f32.powf(constants.zoom)
+    let uv = constants.zoom
         * (coord - vec2(constants.width as f32 * 0.5, constants.height as f32 * 0.5))
         / constants.height as f32;
 
