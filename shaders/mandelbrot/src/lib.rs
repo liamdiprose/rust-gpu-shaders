@@ -11,19 +11,19 @@ pub fn main_fs(
     #[spirv(push_constant)] constants: &ShaderConstants,
     output: &mut Vec4,
 ) {
-    let coord = vec2(
+    let coord = Complex::new(
         frag_coord.x + constants.translate_x + (constants.drag_start_x - constants.drag_end_x),
         frag_coord.y + constants.translate_y + (constants.drag_start_y - constants.drag_end_y),
     );
 
     let uv = constants.zoom
-        * (coord - vec2(constants.width as f32 * 0.5, constants.height as f32 * 0.5))
+        * (coord - 0.5 * Complex::new(constants.width as f32, constants.height as f32))
         / constants.height as f32;
 
-    let mut z = Vec2::ZERO;
+    let mut z = Complex::ZERO;
     let mut n = 35;
     while z.length() < 2.0 && n > 0 {
-        z = z.square() + uv;
+        z = z * z + uv;
         n -= 1;
     }
 
