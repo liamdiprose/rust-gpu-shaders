@@ -48,8 +48,8 @@ fn get_normal(p: Vec3) -> Vec3 {
     n.normalize()
 }
 
-fn get_light(p: Vec3) -> f32 {
-    let light_pos = vec3(0.0, 5.0, 6.0);
+fn get_light(p: Vec3, time: f32) -> f32 {
+    let light_pos = vec3(2.0 * time.sin(), 5.0, 6.0 + 2.0 * time.cos());
     let light_vector = (light_pos - p).normalize();
     let normal_vector = get_normal(p);
     let mut dif = light_vector.dot(normal_vector).clamp(0.0, 1.0);
@@ -80,7 +80,7 @@ pub fn main_fs(
     let rd = vec3(uv.x, uv.y, 1.0).normalize();
 
     let d = ray_march(ro, rd);
-    let dif = get_light(ro + rd * d);
+    let dif = get_light(ro + rd * d, constants.time);
     let col = vec3(dif, dif, dif);
 
     *output = vec4(col.x, col.y, col.z, 1.0);
