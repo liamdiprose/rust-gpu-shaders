@@ -1,12 +1,7 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
-mod shape {
-    pub mod plane;
-    pub mod shape;
-    pub mod sphere;
-}
+pub mod distance_estimate;
 
-use shape::shape::Shape;
 use shared::*;
 use spirv_std::glam::{vec2, vec3, vec4, Vec2, Vec2Swizzles, Vec3, Vec4};
 use spirv_std::spirv;
@@ -15,11 +10,16 @@ const MAX_STEPS: u32 = 100;
 const MAX_DIST: f32 = 100.0;
 const SURF_DIST: f32 = 0.01;
 
-fn distance_estimate(p: Vec3) -> f32 {
-    let sphere = shape::sphere::Sphere::new(0.0, 1.0, 6.0, 1.0);
-    let plane = shape::plane::Plane::new();
+macro_rules! min {
+    ($x: expr) => ($x);
+    ($x: expr, $($y: expr), *$(,)?) => (min!($($y),*).min($x))
+}
 
-    f32::min(sphere.distance_estimate(p), plane.distance_estimate(p))
+fn distance_estimate(p: Vec3) -> f32 {
+    min!(
+        distance_estimate::plane(p),
+        distance_estimate::sphere(p, vec3(0.0, 2.0, 6.0), 1.0),
+    )
 }
 
 fn ray_march(ro: Vec3, rd: Vec3) -> f32 {
@@ -53,7 +53,7 @@ fn get_light(p: Vec3, time: f32) -> f32 {
     let light_vector = (light_pos - p).normalize();
     let normal_vector = get_normal(p);
     let mut dif = light_vector.dot(normal_vector).clamp(0.0, 1.0);
-    let d = ray_march(p + normal_vector * SURF_DIST, light_vector);
+    let d = ray_march(p + normal_vector * SURF_DIST * 2.0, light_vector);
     if d < (light_pos - p).length() {
         dif *= 0.1;
     }
