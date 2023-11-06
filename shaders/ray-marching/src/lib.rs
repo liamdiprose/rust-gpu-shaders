@@ -20,12 +20,12 @@ macro_rules! min {
 fn distance_estimate(p: Vec3) -> f32 {
     min!(
         distance_estimate::plane(p),
-        distance_estimate::sphere(p, vec3(0.0, 1.0, 6.0), 0.5),
-        distance_estimate::torus(p, vec3(1.0, 1.0, 6.0), vec2(0.5, 0.1)),
-        distance_estimate::cuboid(p, vec3(-1.0, 1.0, 6.0), vec3(0.5, 0.3, 0.4)),
-        distance_estimate::tetrahedron(p, vec3(2.0, 1.0, 6.0), 0.5),
-        distance_estimate::capsule(p, vec3(-2.0, 1.0, 6.0), vec3(-3.0, 1.0, 6.0), 0.5),
-        distance_estimate::cylinder(p, vec3(3.0, 1.0, 6.0), vec3(4.0, 1.0, 6.0), 0.5),
+        distance_estimate::sphere(p - vec3(0.0, 1.0, 6.0), 0.5),
+        distance_estimate::torus(p - vec3(1.0, 1.0, 6.0), vec2(0.5, 0.1)),
+        distance_estimate::cuboid(p - vec3(-1.0, 1.0, 6.0), vec3(0.5, 0.3, 0.4)),
+        distance_estimate::tetrahedron(p - vec3(2.0, 1.0, 6.0), 0.5),
+        distance_estimate::capsule(p - vec3(-2.5, 1.0, 6.0), vec3(1.0, 0.0, 0.0), 0.5),
+        distance_estimate::cylinder(p - vec3(3.5, 1.0, 6.0), vec3(1.0, 0.0, 0.0), 0.5),
     )
 }
 
