@@ -1,10 +1,10 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
 pub mod distance_estimate;
+pub mod operator;
 
 use shared::*;
 use spirv_std::glam::{vec2, vec3, vec4, Vec2, Vec2Swizzles, Vec3, Vec4};
-#[allow(unused_imports)]
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;
 
@@ -56,7 +56,7 @@ fn get_normal(p: Vec3) -> Vec3 {
 }
 
 fn get_light(p: Vec3, time: f32) -> f32 {
-    let light_pos = vec3(2.0 * time.sin(), 5.0, 6.0 + 2.0 * time.cos());
+    let light_pos = vec3(2.0 * Float::sin(time), 5.0, 6.0 + 2.0 * Float::cos(time));
     let light_vector = (light_pos - p).normalize();
     let normal_vector = get_normal(p);
     let mut dif = light_vector.dot(normal_vector).clamp(0.0, 1.0);
