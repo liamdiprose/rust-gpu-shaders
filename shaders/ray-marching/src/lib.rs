@@ -4,6 +4,8 @@ pub mod distance_estimate;
 
 use shared::*;
 use spirv_std::glam::{vec2, vec3, vec4, Vec2, Vec2Swizzles, Vec3, Vec4};
+#[allow(unused_imports)]
+use spirv_std::num_traits::Float;
 use spirv_std::spirv;
 
 const MAX_STEPS: u32 = 100;
@@ -18,7 +20,12 @@ macro_rules! min {
 fn distance_estimate(p: Vec3) -> f32 {
     min!(
         distance_estimate::plane(p),
-        distance_estimate::sphere(p, vec3(0.0, 2.0, 6.0), 1.0),
+        distance_estimate::sphere(p, vec3(0.0, 1.0, 6.0), 0.5),
+        distance_estimate::torus(p, vec3(1.0, 1.0, 6.0), vec2(0.5, 0.1)),
+        distance_estimate::cuboid(p, vec3(-1.0, 1.0, 6.0), vec3(0.5, 0.3, 0.4)),
+        distance_estimate::tetrahedron(p, vec3(2.0, 1.0, 6.0), 0.5),
+        distance_estimate::capsule(p, vec3(-2.0, 1.0, 6.0), vec3(-3.0, 1.0, 6.0), 0.5),
+        distance_estimate::cylinder(p, vec3(3.0, 1.0, 6.0), vec3(4.0, 1.0, 6.0), 0.5),
     )
 }
 
