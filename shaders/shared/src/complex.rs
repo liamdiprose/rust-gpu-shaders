@@ -26,6 +26,12 @@ impl Deref for Complex {
     }
 }
 
+impl DerefMut for Complex {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 impl Add for Complex {
     type Output = Self;
     fn add(self, other: Self) -> Self::Output {
