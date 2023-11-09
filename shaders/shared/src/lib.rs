@@ -3,6 +3,7 @@
 pub mod complex;
 
 use bytemuck::{Pod, Zeroable};
+use spirv_std::glam::Vec3;
 
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
@@ -30,4 +31,23 @@ pub struct ShaderConstants {
     /// If this is the first frame after the press of some button, that button's
     /// entry in `mouse_button_press_time` will exactly equal `time`.
     pub mouse_button_press_time: [f32; 3],
+}
+
+pub fn saturate(x: f32) -> f32 {
+    x.clamp(0.0, 1.0)
+}
+
+pub fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
+    // Scale, bias and saturate x to 0..1 range
+    let x = saturate((x - edge0) / (edge1 - edge0));
+    // Evaluate polynomial
+    x * x * (3.0 - 2.0 * x)
+}
+
+pub fn mix(x: f32, y: f32, a: f32) -> f32 {
+    x * (1.0 - a) + y * a
+}
+
+pub fn mix_vec3(x: Vec3, y: Vec3, a: f32) -> Vec3 {
+    x * (1.0 - a) + y * a
 }
