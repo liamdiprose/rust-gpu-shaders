@@ -10,7 +10,7 @@ use spirv_std::spirv;
 
 const MAX_STEPS: u32 = 100;
 const MAX_DIST: f32 = 100.0;
-const SURF_DIST: f32 = 0.01;
+const SURF_DIST: f32 = 0.001;
 
 macro_rules! min {
     ($x: expr) => ($x);
@@ -41,8 +41,12 @@ pub fn main_fs(
             - 0.5 * vec2(constants.width as f32, -(constants.height as f32)))
         / constants.height as f32;
 
-    let ro = vec2(0.1, 0.0);
-    let rd = (cursor - ro).normalize();
+    let ro = constants.zoom
+        * (vec2(constants.drag_end_x, -constants.drag_end_y)
+            - 0.5 * vec2(constants.width as f32, -(constants.height as f32)))
+        / constants.height as f32;
+
+    let rd = (0.99999 * cursor - ro).normalize();
 
     let de = sdf(uv, constants.time);
 
@@ -56,7 +60,7 @@ pub fn main_fs(
     let mut d0 = 0.0;
     for _ in 0..MAX_STEPS {
         let p = ro + rd * d0;
-        let ds = sdf(p, constants.time);
+        let ds = Float::abs(sdf(p, constants.time));
         col = mix_vec3(
             col,
             Vec3::X,
