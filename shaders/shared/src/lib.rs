@@ -3,7 +3,6 @@
 pub mod complex;
 
 use bytemuck::{Pod, Zeroable};
-use spirv_std::glam::Vec3;
 
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
@@ -42,12 +41,4 @@ pub fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
     let x = saturate((x - edge0) / (edge1 - edge0));
     // Evaluate polynomial
     x * x * (3.0 - 2.0 * x)
-}
-
-pub fn mix(x: f32, y: f32, a: f32) -> f32 {
-    x * (1.0 - a) + y * a
-}
-
-pub fn mix_vec3(x: Vec3, y: Vec3, a: f32) -> Vec3 {
-    x * (1.0 - a) + y * a
 }
