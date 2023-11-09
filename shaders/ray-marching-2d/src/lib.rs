@@ -19,9 +19,10 @@ macro_rules! min {
 
 fn sdf(p: Vec2, time: f32) -> f32 {
     min!(
-        sdf::line(p, vec2(-0.2, 0.2), vec2(0.5, 0.7)),
         sdf::circle(p - vec2(-0.2, 0.2), 0.15),
         sdf::rectangle(p - vec2(0.0, -0.2), vec2(0.4, 0.15)),
+        sdf::capsule(p, vec2(-0.2, 0.0), vec2(0.5, 0.2), 0.05),
+        sdf::torus(p - vec2(-0.2, -0.5), vec2(0.15, 0.05)),
     )
 }
 
