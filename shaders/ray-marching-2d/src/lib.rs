@@ -4,7 +4,8 @@ pub mod operator;
 pub mod sdf;
 
 use shared::*;
-use spirv_std::glam::{vec2, vec3, Vec2, Vec4};
+use spirv_std::glam::{vec2, vec3, Mat2, Vec2, Vec4};
+use spirv_std::num_traits::Euclid;
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;
 
@@ -18,11 +19,26 @@ macro_rules! min {
 }
 
 fn sdf(p: Vec2, time: f32) -> f32 {
+    let c = 0.6;
+    let r = 0.15;
+    let x = Euclid::rem_euclid(&(time / 2.0), &4.0);
+    let angle = c / (2.0 * r)
+        * if x > 3.0 {
+            x - 4.0
+        } else if x > 1.0 {
+            2.0 - x
+        } else {
+            x
+        };
     min!(
-        sdf::circle(p - vec2(-0.2, 0.2), 0.15),
-        sdf::rectangle(p - vec2(0.0, -0.2), vec2(0.4, 0.15)),
-        sdf::capsule(p, vec2(-0.2, 0.0), vec2(0.5, 0.2), 0.05),
-        sdf::torus(p - vec2(-0.2, -0.5), vec2(0.15, 0.05)),
+        sdf::torus(p - vec2(0.0, -0.2), vec2(r - 0.03 - 0.005, 0.03)),
+        sdf::capsule(
+            Mat2::from_angle(angle).mul_vec2(p - vec2(0.0, -0.2)) - vec2(-r * angle, r),
+            vec2(-c / 2.0, 0.0),
+            vec2(c / 2.0, 0.0),
+            0.005
+        ),
+        sdf::rectangle(p - vec2(0.0, -0.45), vec2(0.2, 0.1)),
     )
 }
 
@@ -46,8 +62,8 @@ pub fn main_fs(
     let mut col = {
         let d = sdf(uv, constants.time);
 
-        vec3(0.0, 0.0, smoothstep(1.0 / constants.height as f32, 0.0, d)).lerp(
-            vec3(0.0, 1.0, 1.0),
+        (vec3(0.3, 0.1, 0.02) * smoothstep(1.0 / constants.height as f32, 0.0, d)).lerp(
+            vec3(0.4, 0.4, 0.3),
             smoothstep(1.0 / constants.height as f32, 0.0, Float::abs(d)),
         )
     };
