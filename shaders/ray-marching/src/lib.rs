@@ -27,6 +27,7 @@ fn sdf(p: Vec3, time: f32) -> f32 {
         sdf::cuboid(p - vec3(-2.0, 1.0, 0.0), vec3(0.5, 0.3, 0.4)),
         sdf::tetrahedron(p - vec3(4.0, 1.0, 0.0), 0.5),
         sdf::capsule(p - vec3(-4.5, 1.0, 0.0), vec3(1.0, 0.0, 0.0), 0.5),
+        sdf::line(p - vec3(-0.0, 1.0, 2.0), vec3(1.0, 0.0, 0.0)),
         sdf::cylinder(
             Mat3::from_rotation_y(time).mul_vec3(p - vec3(6.0, 1.0, 0.0)),
             vec3(1.0, 0.0, 0.0),

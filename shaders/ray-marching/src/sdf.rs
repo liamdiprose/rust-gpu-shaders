@@ -23,12 +23,16 @@ pub fn tetrahedron(p: Vec3, r: f32) -> f32 {
     (md - r) / Float::sqrt(3.0)
 }
 
-pub fn capsule(p: Vec3, ab: Vec3, r: f32) -> f32 {
+pub fn line(p: Vec3, ab: Vec3) -> f32 {
     let a = - ab / 2.0;
     let ap = p - a;
     let t = (ap.dot(ab) / ab.length_squared()).clamp(0.0, 1.0);
     let c = a + t * ab;
-    p.distance(c) - r
+    p.distance(c)
+}
+
+pub fn capsule(p: Vec3, ab: Vec3, r: f32) -> f32 {
+    line(p, ab) - r
 }
 
 pub fn cylinder(p: Vec3, ab: Vec3, r: f32) -> f32 {
