@@ -38,7 +38,7 @@ fn sdf(p: Vec2, time: f32) -> f32 {
             vec2(c / 2.0, 0.0),
             0.005
         ),
-        sdf::rectangle(p - vec2(0.0, -0.445), vec2(0.2, 0.1)),
+        sdf::rectangle(p - vec2(0.0, -0.745), vec2(0.2, 0.4)),
         sdf::plane(p - vec2(0.0, -0.4)),
     )
 }
@@ -63,10 +63,11 @@ pub fn main_fs(
     let mut col = {
         let d = sdf(uv, constants.time);
 
-        (vec3(0.3, 0.1, 0.02) * smoothstep(1.0 / constants.height as f32, 0.0, d)).lerp(
-            vec3(0.4, 0.4, 0.3),
-            smoothstep(1.0 / constants.height as f32, 0.0, Float::abs(d)),
-        )
+        if d < 0.0 {
+            vec3(10.0 * -d, -d, 0.0)
+        } else {
+            vec3(10.0 * d, 0.0, d / 6.0)
+        }
     };
 
     let mut d0 = 0.0;
@@ -75,15 +76,15 @@ pub fn main_fs(
         let ds = Float::abs(sdf(p, constants.time));
         col = col
             .lerp(
-                vec3(1.0, 0.0, 0.0),
+                vec3(0.0, 0.6, 0.0),
                 smoothstep(
-                    4.0 / constants.height as f32,
+                    6.0 / constants.height as f32,
                     0.0,
                     sdf::line(uv, p, p + rd * Float::max(ds, Float::epsilon())),
                 ),
             )
             .lerp(
-                vec3(1.0, 0.3, 0.2),
+                vec3(0.5, 0.6, 0.4),
                 smoothstep(
                     1.0 / constants.height as f32,
                     0.0,
@@ -91,9 +92,9 @@ pub fn main_fs(
                 ),
             )
             .lerp(
-                vec3(1.0, 0.0, 0.1),
+                vec3(0.2, 0.4, 0.1),
                 smoothstep(
-                    1.0 / constants.height as f32,
+                    2.0 / constants.height as f32,
                     0.0,
                     Float::abs(sdf::circle(uv - p, ds)),
                 ),
