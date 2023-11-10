@@ -1,7 +1,7 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
-pub mod distance_estimate;
 pub mod operator;
+pub mod sdf;
 
 use shared::*;
 use spirv_std::glam::{vec2, vec3, vec4, Mat3, Vec2, Vec2Swizzles, Vec3, Vec4};
@@ -19,15 +19,15 @@ macro_rules! min {
     ($x: expr, $($y: expr), *$(,)?) => (min!($($y),*).min($x))
 }
 
-fn distance_estimate(p: Vec3, time: f32) -> f32 {
+fn sdf(p: Vec3, time: f32) -> f32 {
     min!(
-        distance_estimate::plane(p),
-        distance_estimate::sphere(p - vec3(0.0, 1.0, 0.0), 0.5),
-        distance_estimate::torus(p - vec3(2.0, 1.0, 0.0), vec2(0.6, 0.2)),
-        distance_estimate::cuboid(p - vec3(-2.0, 1.0, 0.0), vec3(0.5, 0.3, 0.4)),
-        distance_estimate::tetrahedron(p - vec3(4.0, 1.0, 0.0), 0.5),
-        distance_estimate::capsule(p - vec3(-4.5, 1.0, 0.0), vec3(1.0, 0.0, 0.0), 0.5),
-        distance_estimate::cylinder(
+        sdf::plane(p),
+        sdf::sphere(p - vec3(0.0, 1.0, 0.0), 0.5),
+        sdf::torus(p - vec3(2.0, 1.0, 0.0), vec2(0.6, 0.2)),
+        sdf::cuboid(p - vec3(-2.0, 1.0, 0.0), vec3(0.5, 0.3, 0.4)),
+        sdf::tetrahedron(p - vec3(4.0, 1.0, 0.0), 0.5),
+        sdf::capsule(p - vec3(-4.5, 1.0, 0.0), vec3(1.0, 0.0, 0.0), 0.5),
+        sdf::cylinder(
             Mat3::from_rotation_y(time).mul_vec3(p - vec3(6.0, 1.0, 0.0)),
             vec3(1.0, 0.0, 0.0),
             0.5
@@ -40,7 +40,7 @@ fn ray_march(ro: Vec3, rd: Vec3, time: f32) -> f32 {
 
     for _ in 0..MAX_STEPS {
         let p = ro + rd * d0;
-        let ds = distance_estimate(p, time);
+        let ds = sdf(p, time);
         d0 += ds;
         if d0 > MAX_DIST || ds < SURF_DIST {
             break;
@@ -51,12 +51,12 @@ fn ray_march(ro: Vec3, rd: Vec3, time: f32) -> f32 {
 }
 
 fn get_normal(p: Vec3, time: f32) -> Vec3 {
-    let d = distance_estimate(p, time);
+    let d = sdf(p, time);
     let e = vec2(0.01, 0.0);
     let n = d - vec3(
-        distance_estimate(p - e.xyy(), time),
-        distance_estimate(p - e.yxy(), time),
-        distance_estimate(p - e.yyx(), time),
+        sdf(p - e.xyy(), time),
+        sdf(p - e.yxy(), time),
+        sdf(p - e.yyx(), time),
     );
     n.normalize()
 }
