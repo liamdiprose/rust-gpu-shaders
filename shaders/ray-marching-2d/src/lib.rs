@@ -38,7 +38,8 @@ fn sdf(p: Vec2, time: f32) -> f32 {
             vec2(c / 2.0, 0.0),
             0.005
         ),
-        sdf::rectangle(p - vec2(0.0, -0.45), vec2(0.2, 0.1)),
+        sdf::rectangle(p - vec2(0.0, -0.445), vec2(0.2, 0.1)),
+        sdf::plane(p - vec2(0.0, -0.4)),
     )
 }
 

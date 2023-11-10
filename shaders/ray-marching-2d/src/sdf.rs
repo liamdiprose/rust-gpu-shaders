@@ -1,6 +1,10 @@
 use spirv_std::glam::Vec2;
 use spirv_std::num_traits::Float;
 
+pub fn plane(p: Vec2) -> f32 {
+    p.y
+}
+
 pub fn circle(p: Vec2, r: f32) -> f32 {
     p.length() - r
 }
