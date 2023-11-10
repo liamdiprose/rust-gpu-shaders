@@ -78,7 +78,7 @@ pub fn main_fs(
                 smoothstep(
                     4.0 / constants.height as f32,
                     0.0,
-                    sdf::line(uv, p, p + rd * ds),
+                    sdf::line(uv, p, p + rd * Float::max(ds, Float::epsilon())),
                 ),
             )
             .lerp(
