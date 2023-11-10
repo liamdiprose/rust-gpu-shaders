@@ -6,7 +6,10 @@ pub fn circle(p: Vec2, r: f32) -> f32 {
 }
 
 pub fn rectangle(p: Vec2, dim: Vec2) -> f32 {
-    (p.abs() - dim).max_element()
+    let v = p.abs() - dim;
+    let e = v.max(Vec2::ZERO).length();
+    let i = Float::min(0.0, v.max_element());
+    e + i
 }
 
 pub fn line(p: Vec2, a: Vec2, b: Vec2) -> f32 {
