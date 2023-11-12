@@ -1,4 +1,4 @@
-use spirv_std::glam::Vec2;
+use spirv_std::glam::{vec2, Vec2};
 use spirv_std::num_traits::Float;
 
 pub fn plane(p: Vec2) -> f32 {
@@ -30,4 +30,14 @@ pub fn capsule(p: Vec2, a: Vec2, b: Vec2, r: f32) -> f32 {
 
 pub fn torus(p: Vec2, r: Vec2) -> f32 {
     Float::abs(p.length() - r.x) - r.y
+}
+
+pub fn equilateral_triangle(mut p: Vec2, r: f32) -> f32 {
+    let k = Float::sqrt(3.0);
+    p = vec2(Float::abs(p.x) - r, p.y + r / k);
+    if p.x + k * p.y > 0.0 {
+        p = vec2(p.x - k * p.y, -k * p.x - p.y) / 2.0;
+    }
+    p.x -= p.x.clamp(-2.0 * r, 0.0);
+    -p.length() * Float::signum(p.y)
 }
