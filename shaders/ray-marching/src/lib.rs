@@ -1,8 +1,8 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
 pub mod operator;
-pub mod sdf;
 
+use shared::sdf_3d as sdf;
 use shared::*;
 use spirv_std::glam::{vec2, vec3, vec4, Mat3, Vec2, Vec2Swizzles, Vec3, Vec4};
 use spirv_std::num_traits::Float;

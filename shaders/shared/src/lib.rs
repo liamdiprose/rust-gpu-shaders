@@ -1,6 +1,8 @@
 #![cfg_attr(target_arch = "spirv", no_std, feature(lang_items))]
 
 pub mod complex;
+pub mod sdf_2d;
+pub mod sdf_3d;
 
 use bytemuck::{Pod, Zeroable};
 
