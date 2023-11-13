@@ -5,6 +5,7 @@ pub mod sdf_2d;
 pub mod sdf_3d;
 
 use bytemuck::{Pod, Zeroable};
+use spirv_std::glam::{vec2, Vec2, Vec4};
 
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
@@ -32,6 +33,13 @@ pub struct ShaderConstants {
     /// If this is the first frame after the press of some button, that button's
     /// entry in `mouse_button_press_time` will exactly equal `time`.
     pub mouse_button_press_time: [f32; 3],
+}
+
+pub fn fullscreen_vs(vert_id: i32, out_pos: &mut Vec4) {
+    let uv = vec2(((vert_id << 1) & 2) as f32, (vert_id & 2) as f32);
+    let pos = 2.0 * uv - Vec2::ONE;
+
+    *out_pos = pos.extend(0.0).extend(1.0);
 }
 
 pub fn saturate(x: f32) -> f32 {
