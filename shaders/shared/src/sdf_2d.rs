@@ -13,13 +13,13 @@ pub fn rectangle(p: Vec2, dim: Vec2) -> f32 {
 }
 
 /// d must be normalized or else it will scale space
-pub fn infinite_plane(p: Vec2, d: Vec2) -> f32 {
+pub fn plane(p: Vec2, d: Vec2) -> f32 {
     d.perp_dot(p)
 }
 
 /// d must be normalized or else it will scale space
-pub fn infinite_line(p: Vec2, d: Vec2) -> f32 {
-    infinite_plane(p, d).abs()
+pub fn line(p: Vec2, d: Vec2) -> f32 {
+    plane(p, d).abs()
 }
 
 pub fn ray(p: Vec2, d: Vec2) -> f32 {
@@ -28,11 +28,11 @@ pub fn ray(p: Vec2, d: Vec2) -> f32 {
 }
 
 pub fn plane_ray(p: Vec2, d: Vec2) -> f32 {
-    ray(p, d) * infinite_plane(p, d).signum()
+    ray(p, d) * plane(p, d).signum()
 }
 
 pub fn plane_segment(p: Vec2, a: Vec2, b: Vec2) -> f32 {
-    line_segment(p, a, b) * infinite_plane(p - a, b - a).signum()
+    line_segment(p, a, b) * plane(p - a, b - a).signum()
 }
 
 pub fn line_segment(p: Vec2, a: Vec2, b: Vec2) -> f32 {
