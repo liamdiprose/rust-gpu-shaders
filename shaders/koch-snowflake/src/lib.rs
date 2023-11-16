@@ -1,6 +1,5 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
-use core::f32::consts::PI;
 use shared::*;
 use spirv_std::glam::{vec2, Vec2, Vec2Swizzles, Vec3, Vec4};
 use spirv_std::num_traits::Float;
@@ -31,13 +30,21 @@ fn koch_curve(mut p: Vec2, r: f32, m: u32) -> f32 {
     p.y / scale
 }
 
-fn koch_snowflake(mut p: Vec2, r: f32, m: u32) -> f32 {
-    let angle = (5.0 / 6.0) * PI;
+
+fn koch_flake(mut p: Vec2, r: f32, m: u32, angle: f32) -> f32 {
     let n = Vec2::from_angle(angle).yx();
     p.x = p.x.abs();
     p.y += r * angle.tan() * 0.5;
     p -= n * n.dot(p - vec2(r / 2.0, 0.0)).max(0.0) * 2.0;
     koch_curve(p, r, m)
+}
+
+fn koch_snowflake(p: Vec2, r: f32, m: u32) -> f32 {
+    koch_flake(p, r, m, (5.0 / 6.0) * PI)
+}
+
+fn koch_antisnowflake(p: Vec2, r: f32, m: u32) -> f32 {
+    -koch_flake(p, r, m, PI / 6.0)
 }
 
 #[spirv(fragment)]
