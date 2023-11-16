@@ -7,6 +7,9 @@ pub mod sdf_3d;
 use bytemuck::{Pod, Zeroable};
 use spirv_std::glam::{vec2, Vec2, Vec4};
 
+pub const SQRT_3: f32 = 1.732050807568877293527446341505872367;
+pub use core::f32::consts::PI;
+
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
 pub struct ShaderConstants {
