@@ -10,6 +10,6 @@ pub fn repeat_y(p: Vec2, factor: f32) -> Vec2 {
     vec2(p.x, p.y - factor * (p.y / factor).round())
 }
 
-pub fn repeat_xy(mut p: Vec2, factor: Vec2) -> Vec2 {
-    p - factor * vec2(p.x / factor.x, p.y / factor.y).round()
+pub fn repeat_xy(p: Vec2, factor: Vec2) -> Vec2 {
+    p - factor * (p / factor).round()
 }
