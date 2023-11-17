@@ -19,11 +19,13 @@ pub fn repeat_xy(p: Vec3, factor: Vec2) -> Vec3 {
 }
 
 pub fn repeat_xz(p: Vec3, factor: Vec2) -> Vec3 {
-    (p.xz() - factor * (p.xz() / factor).round()).extend(p.y).xzy()
+    let p0 = p.xz() - factor * (p.xz() / factor).round();
+    vec3(p0.x, p.y, p0.y)
 }
 
 pub fn repeat_yz(p: Vec3, factor: Vec2) -> Vec3 {
-    (p.yz() - factor * (p.yz() / factor).round()).extend(p.x).zxy()
+    let p0 = p.yz() - factor * (p.yz() / factor).round();
+    vec3(p.x, p0.y, p0.y)
 }
 
 pub fn repeat_xyz(p: Vec3, factor: Vec3) -> Vec3 {

@@ -1,6 +1,8 @@
 use spirv_std::glam::{vec2, Vec2, Vec3, Vec3Swizzles};
 use spirv_std::num_traits::Float;
 
+pub mod ops;
+
 pub fn plane(p: Vec3) -> f32 {
     p.y
 }

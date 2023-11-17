@@ -1,7 +1,5 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
-pub mod operator;
-
 use shared::sdf_2d as sdf;
 use shared::*;
 use spirv_std::glam::{vec2, vec3, Mat2, Vec2, Vec4};
