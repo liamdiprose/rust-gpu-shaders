@@ -2,6 +2,8 @@ use spirv_std::glam::{vec3, Vec2, Vec3, Vec3Swizzles};
 #[allow(unused_imports)]
 use spirv_std::num_traits::Float;
 
+pub use crate::sdf_2d::ops::{difference, intersection, symmetric_difference, union};
+
 pub fn repeat_x(p: Vec3, factor: f32) -> Vec3 {
     vec3(p.x - factor * (p.x / factor).round(), p.y, p.z)
 }

@@ -1,13 +1,14 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
 use shared::sdf_2d as sdf;
+use shared::sdf_2d::ops::difference;
 use shared::*;
 use spirv_std::glam::{vec2, vec3, Vec2, Vec3, Vec4};
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;
 
 fn sdf(p: Vec2, _time: f32) -> f32 {
-    let r = 1.0;
+    let r = 0.5;
     sierpinski_triangle(p + vec2(0.65 * r, 0.0), r, 20)
 }
 
@@ -20,9 +21,9 @@ fn sierpinski_triangle(mut p: Vec2, mut r: f32, m: u32) -> f32 {
 
     for _ in 0..m {
         p.x = p.x.abs();
-        d = subtract(
+        d = difference(
             d,
-            subtract(
+            difference(
                 sdf::plane_segment(p, vec2(c * r, 0.5 * r), vec2(0.0, -r)),
                 sdf::plane_ray(p - vec2(c * r, 0.5 * r), Vec2::NEG_X),
             ),
@@ -33,10 +34,6 @@ fn sierpinski_triangle(mut p: Vec2, mut r: f32, m: u32) -> f32 {
     }
 
     d
-}
-
-pub fn subtract(a: f32, b: f32) -> f32 {
-    Float::max(a, -b)
 }
 
 fn from_pixels(x: f32, y: f32, constants: &ShaderConstants) -> Vec2 {

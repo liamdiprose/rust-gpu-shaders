@@ -14,3 +14,19 @@ pub fn repeat_xy(p: Vec2, factor: Vec2) -> Vec2 {
     p - factor * (p / factor).round()
 }
 
+pub fn union(a: f32, b: f32) -> f32 {
+    a.min(b)
+}
+
+pub fn intersection(a: f32, b: f32) -> f32 {
+    a.max(b)
+}
+
+pub fn difference(a: f32, b: f32) -> f32 {
+    intersection(a, -b)
+}
+
+pub fn symmetric_difference(a: f32, b: f32) -> f32 {
+    difference(union(a, b), intersection(a, b))
+}
+
