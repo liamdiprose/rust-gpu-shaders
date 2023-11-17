@@ -1,5 +1,5 @@
 use spirv_std::glam::{vec2, Vec2};
-#[allow(unused_imports)]
+#[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 
 pub fn repeat_x(p: Vec2, factor: f32) -> Vec2 {

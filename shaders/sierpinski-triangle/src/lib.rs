@@ -4,6 +4,7 @@ use shared::sdf_2d as sdf;
 use shared::sdf_2d::ops::difference;
 use shared::*;
 use spirv_std::glam::{vec2, vec3, Vec2, Vec3, Vec4};
+#[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;
 
@@ -61,14 +62,15 @@ pub fn main_fs(
     if constants.mouse_button_pressed & 1 != 0 {
         let cursor = from_pixels(constants.drag_end_x, constants.drag_end_y, constants);
 
-        let ds = Float::abs(sdf(cursor, constants.time));
+        let ds = sdf(cursor, constants.time).abs();
         col = col.lerp(
             vec3(0.1, 0.6, 0.8),
             smoothstep(
                 2.0 * constants.zoom / constants.height as f32,
                 0.0,
-                Float::abs(sdf::circle(uv - cursor, ds))
-                    .min(sdf::circle(uv - cursor, constants.zoom * 0.005)),
+                sdf::circle(uv - cursor, ds)
+                    .min(sdf::circle(uv - cursor, constants.zoom * 0.005))
+                    .abs(),
             ),
         );
     }

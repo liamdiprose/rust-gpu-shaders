@@ -2,6 +2,7 @@
 
 use shared::*;
 use spirv_std::glam::{vec2, Vec2, Vec2Swizzles, Vec3, Vec4};
+#[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;
 
@@ -30,7 +31,6 @@ fn koch_curve(mut p: Vec2, r: f32, m: u32) -> f32 {
     p.y / scale
 }
 
-
 fn koch_flake(mut p: Vec2, r: f32, m: u32, angle: f32) -> f32 {
     let n = Vec2::from_angle(angle).yx();
     p.x = p.x.abs();
@@ -58,7 +58,7 @@ pub fn main_fs(
 
     let mut col = Vec3::ZERO;
 
-    let n = 9.0 * Float::log2(1.0 + cursor.length());
+    let n = 9.0 * (1.0 + cursor.length()).log2();
     let d = koch_snowflake(uv, 0.8, n as u32);
 
     col += smoothstep(1.0 / (constants.height as f32), 0.0, d.abs());

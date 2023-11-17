@@ -1,5 +1,5 @@
 use spirv_std::glam::{vec3, Vec2, Vec3, Vec3Swizzles};
-#[allow(unused_imports)]
+#[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 
 pub use crate::sdf_2d::ops::{difference, intersection, symmetric_difference, union};
