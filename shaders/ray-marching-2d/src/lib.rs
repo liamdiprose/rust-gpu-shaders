@@ -4,6 +4,7 @@ use shared::sdf_2d as sdf;
 use shared::*;
 use spirv_std::glam::{vec2, vec3, Mat2, Vec2, Vec4};
 use spirv_std::num_traits::Euclid;
+#[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;
 
@@ -37,7 +38,7 @@ fn sdf(p: Vec2, time: f32) -> f32 {
             0.005
         ),
         sdf::rectangle(p - vec2(0.0, -0.745), vec2(0.2, 0.4)),
-        sdf::plane(p - vec2(0.0, -0.4)),
+        sdf::plane(p - vec2(0.0, -0.4), Vec2::X),
     )
 }
 
@@ -71,14 +72,14 @@ pub fn main_fs(
     let mut d0 = 0.0;
     for _ in 0..MAX_STEPS {
         let p = ro + rd * d0;
-        let ds = Float::abs(sdf(p, constants.time));
+        let ds = sdf(p, constants.time).abs();
         col = col
             .lerp(
                 vec3(0.0, 0.6, 0.0),
                 smoothstep(
                     6.0 / constants.height as f32,
                     0.0,
-                    sdf::line(uv, p, p + rd * Float::max(ds, Float::epsilon())),
+                    sdf::line_segment(uv, p, p + rd * ds.max(f32::EPSILON)),
                 ),
             )
             .lerp(
@@ -94,7 +95,7 @@ pub fn main_fs(
                 smoothstep(
                     2.0 / constants.height as f32,
                     0.0,
-                    Float::abs(sdf::circle(uv - p, ds)),
+                    sdf::circle(uv - p, ds).abs(),
                 ),
             );
         d0 += ds;

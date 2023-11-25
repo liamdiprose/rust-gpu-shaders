@@ -18,7 +18,7 @@ fn sierpinski_triangle(mut p: Vec2, mut r: f32, m: u32) -> f32 {
     let c = (PI / 6.0).cos();
 
     let mut d = sdf::equilateral_triangle(p, r);
-    r = r / SQRT_3;
+    r /= SQRT_3;
 
     for _ in 0..m {
         p.x = p.x.abs();

@@ -10,7 +10,7 @@ pub fn circle(p: Vec2, r: f32) -> f32 {
 pub fn rectangle(p: Vec2, dim: Vec2) -> f32 {
     let v = p.abs() - dim;
     let e = v.max(Vec2::ZERO).length();
-    let i = Float::min(0.0, v.max_element());
+    let i = v.max_element().min(0.0);
     e + i
 }
 
@@ -50,12 +50,12 @@ pub fn capsule(p: Vec2, a: Vec2, b: Vec2, r: f32) -> f32 {
 }
 
 pub fn torus(p: Vec2, r: Vec2) -> f32 {
-    Float::abs(p.length() - r.x) - r.y
+    (p.length() - r.x).abs() - r.y
 }
 
 pub fn equilateral_triangle(mut p: Vec2, r: f32) -> f32 {
     p.x = p.x.abs();
-    let k = Float::sqrt(3.0);
+    let k = 3.0.sqrt();
 
     Float::max(
         plane_ray(p - vec2(r, -r / k), Vec2::NEG_X),

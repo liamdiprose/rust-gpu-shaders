@@ -20,7 +20,7 @@ pub fn tetrahedron(p: Vec3, r: f32) -> f32 {
         .max(-p.x + p.y + p.z)
         .max(p.x - p.y + p.z)
         .max(p.x + p.y - p.z);
-    (md - r) / Float::sqrt(3.0)
+    (md - r) / 3.0.sqrt()
 }
 
 pub fn line(p: Vec3, ab: Vec3) -> f32 {
