@@ -1,6 +1,8 @@
 use core::convert::From;
 use core::ops::*;
 use spirv_std::glam::Vec2;
+#[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
+use spirv_std::num_traits::Float;
 
 #[derive(Copy, Clone)]
 pub struct Complex(Vec2);
@@ -10,6 +12,37 @@ impl Complex {
         Complex::from(Vec2::new(x, y))
     }
     pub const ZERO: Complex = Complex(Vec2::ZERO);
+}
+
+impl Complex {
+    pub fn conjugate(&self) -> Self {
+        Self::new(self.x, -self.y)
+    }
+
+    pub fn powf(self, exp: f32) -> Self {
+        let (r, theta) = self.to_polar();
+        Self::from_polar(r.powf(exp), theta * exp)
+    }
+
+    pub fn norm(self) -> f32 {
+        self.length()
+    }
+
+    pub fn norm_squared(self) -> f32 {
+        self.length_squared()
+    }
+
+    pub fn arg(self) -> f32 {
+        self.y.atan2(self.x)
+    }
+
+    pub fn to_polar(self) -> (f32, f32) {
+        (self.norm(), self.arg())
+    }
+
+    pub fn from_polar(r: f32, theta: f32) -> Self {
+        Self::new(r * theta.cos(), r * theta.sin())
+    }
 }
 
 impl From<Vec2> for Complex {
