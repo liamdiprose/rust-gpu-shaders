@@ -52,6 +52,8 @@ impl crate::controller::Controller for Controller {
         let v = 34.102688577484;
         let scroll = if self.scroll > c {
             self.scroll - v * (1.0 + ((self.scroll - c) / v).floor())
+        } else if self.scroll < -1.0 {
+            -1.0 - self.scroll.abs().log10()
         } else {
             self.scroll
         };
