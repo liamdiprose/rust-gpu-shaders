@@ -14,31 +14,21 @@ impl Options {
 }
 
 pub struct Controller {
-    cursor: Vec2,
-    camera: Vec2,
-
     scroll: f64,
-    prev_cursor: Vec2,
     shader_constants: ShaderConstants,
 }
 
 impl crate::controller::Controller for Controller {
     fn new() -> Self {
         Self {
-            cursor: Vec2::ZERO,
-            camera: Vec2::ZERO,
-
             scroll: 0.0,
-            prev_cursor: Vec2::ZERO,
             shader_constants: ShaderConstants::zeroed(),
         }
     }
 
     fn mouse_input(&mut self, _state: ElementState, _button: MouseButton) {}
 
-    fn mouse_move(&mut self, position: PhysicalPosition<f64>) {
-        self.cursor = vec2(position.x as f32, position.y as f32);
-    }
+    fn mouse_move(&mut self, _position: PhysicalPosition<f64>) {}
 
     fn mouse_scroll(&mut self, delta: MouseScrollDelta) {
         self.scroll += match delta {
@@ -53,7 +43,7 @@ impl crate::controller::Controller for Controller {
         let scroll = if self.scroll > c {
             self.scroll - v * (1.0 + ((self.scroll - c) / v).floor())
         } else if self.scroll < -1.0 {
-            -1.0 - self.scroll.abs().log10()
+            -1.0 - (-self.scroll).log10()
         } else {
             self.scroll
         };
@@ -62,26 +52,13 @@ impl crate::controller::Controller for Controller {
         self.shader_constants = ShaderConstants {
             width: width,
             height: height,
-
-            cursor_x: self.cursor.x,
-            cursor_y: self.cursor.y,
             zoom: zoom as f32,
-            translate_x: self.camera.x,
-            translate_y: self.camera.y,
-
             x: -0.08443636,
             y: -0.087451585,
         };
-        self.finish_update();
     }
 
     fn push_constants(&self) -> &[u8] {
         bytemuck::bytes_of(&self.shader_constants)
-    }
-}
-
-impl Controller {
-    pub fn finish_update(&mut self) {
-        self.prev_cursor = self.cursor;
     }
 }
