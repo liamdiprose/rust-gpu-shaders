@@ -1,7 +1,6 @@
 use bytemuck::Zeroable;
 use egui::{vec2, Vec2};
 use shared::push_constants::sierpinski_triangle::ShaderConstants;
-use std::time::{Duration, Instant};
 use winit::event::{ElementState, MouseScrollDelta};
 use winit::{dpi::PhysicalPosition, event::MouseButton};
 
@@ -15,116 +14,61 @@ impl Options {
 }
 
 pub struct Controller {
-    start: Instant,
-    elapsed: Duration,
     cursor: Vec2,
-    drag_start: Vec2,
-    drag_end: Vec2,
     camera: Vec2,
-    zoom: f32,
-    mouse_button_pressed: bool,
 
-    scroll: f32,
-    drag: Vec2,
+    scroll: f64,
     prev_cursor: Vec2,
-    options: Options,
     shader_constants: ShaderConstants,
 }
 
 impl crate::controller::Controller for Controller {
     fn new() -> Self {
         Self {
-            start: Instant::now(),
-            elapsed: Duration::ZERO,
             cursor: Vec2::ZERO,
-            drag_start: Vec2::ZERO,
-            drag_end: Vec2::ZERO,
             camera: Vec2::ZERO,
-            zoom: 1.0,
-            mouse_button_pressed: false,
 
-            scroll: 1.0,
-            drag: Vec2::ZERO,
+            scroll: 0.0,
             prev_cursor: Vec2::ZERO,
-            options: Options::new(),
             shader_constants: ShaderConstants::zeroed(),
         }
     }
 
-    fn mouse_input(&mut self, state: ElementState, button: MouseButton) {
-        if button == MouseButton::Left {
-            self.mouse_button_pressed = match state {
-                ElementState::Pressed => true,
-                ElementState::Released => {
-                    self.drag = self.drag_start - self.drag_end;
-                    false
-                }
-            };
-
-            self.drag_start = self.cursor;
-            self.drag_end = self.cursor;
-        }
-    }
+    fn mouse_input(&mut self, _state: ElementState, _button: MouseButton) {}
 
     fn mouse_move(&mut self, position: PhysicalPosition<f64>) {
         self.cursor = vec2(position.x as f32, position.y as f32);
-        if self.mouse_button_pressed {
-            self.drag_end = self.cursor;
-        }
     }
 
     fn mouse_scroll(&mut self, delta: MouseScrollDelta) {
-        self.scroll *= match delta {
-            MouseScrollDelta::LineDelta(_, y) => {
-                let v = 1.0 + 0.1 * y.abs();
-                if y < 0.0 {
-                    v
-                } else {
-                    1.0 / v
-                }
-            }
-            MouseScrollDelta::PixelDelta(p) => {
-                let v = 1.0 + 0.1 * (1.0 + p.y.abs() as f32).ln();
-                if p.y < 0.0 {
-                    v
-                } else {
-                    1.0 / v
-                }
-            }
+        self.scroll += match delta {
+            MouseScrollDelta::LineDelta(_, y) => y as f64,
+            MouseScrollDelta::PixelDelta(p) => 1.0 + 0.1 * (1.0 + p.y).ln(),
         };
     }
 
-    fn update(&mut self, width: u32, height: u32, options: crate::shaders::Options) {
-        self.options = options.sierpinski_triangle;
-        self.elapsed = self.start.elapsed();
-        self.zoom *= self.scroll;
-        self.camera *= 1.0 / self.scroll;
-        self.camera += self.drag;
-
-        let x = -0.08443636;
-        let y = -0.087451585;
-        if self.zoom <= 0.000059387916 {
-            self.zoom *= 255.2727140652654;
-        }
+    fn update(&mut self, width: u32, height: u32, _options: crate::shaders::Options) {
+        let c = 59.87868500430847;
+        let v = 34.102688577484;
+        let scroll = if self.scroll > c {
+            self.scroll - v * (1.0 + ((self.scroll - c) / v).floor())
+        } else {
+            self.scroll
+        };
+        let zoom = 0.85_f64.powf(scroll);
 
         self.shader_constants = ShaderConstants {
             width: width,
             height: height,
-            time: self.elapsed.as_secs_f32(),
 
             cursor_x: self.cursor.x,
             cursor_y: self.cursor.y,
-            drag_start_x: self.drag_start.x,
-            drag_start_y: self.drag_start.y,
-            drag_end_x: self.drag_end.x,
-            drag_end_y: self.drag_end.y,
-            zoom: self.zoom,
+            zoom: zoom as f32,
             translate_x: self.camera.x,
             translate_y: self.camera.y,
-            mouse_button_pressed: !(1 << self.mouse_button_pressed as u32),
 
-            x,
-            y,
+            x: -0.08443636,
+            y: -0.087451585,
         };
         self.finish_update();
     }
@@ -136,8 +80,6 @@ impl crate::controller::Controller for Controller {
 
 impl Controller {
     pub fn finish_update(&mut self) {
-        self.scroll = 1.0;
-        self.drag = Vec2::ZERO;
         self.prev_cursor = self.cursor;
     }
 }
