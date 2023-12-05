@@ -1,5 +1,6 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
+use push_constants::koch_snowflake::ShaderConstants;
 use shared::*;
 use spirv_std::glam::{vec2, Vec2, Vec2Swizzles, Vec3, Vec4};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
@@ -58,7 +59,7 @@ pub fn main_fs(
 
     let mut col = Vec3::ZERO;
 
-    let n = 9.0 * (1.0 + cursor.length()).log2();
+    let n = 1.0 + 8.0 * (1.0 + cursor.length()).log2();
     let d = koch_snowflake(uv, 0.8, n as u32);
 
     col += smoothstep(1.0 / (constants.height as f32), 0.0, d.abs());

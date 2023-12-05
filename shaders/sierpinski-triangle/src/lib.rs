@@ -1,5 +1,6 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
+use push_constants::sierpinski_triangle::ShaderConstants;
 use shared::sdf_2d as sdf;
 use shared::sdf_2d::ops::difference;
 use shared::*;

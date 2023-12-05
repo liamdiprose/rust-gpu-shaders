@@ -1,5 +1,6 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
+use push_constants::ray_marching::ShaderConstants;
 use shared::sdf_3d as sdf;
 use shared::*;
 use spirv_std::glam::{vec2, vec3, Mat3, Vec2Swizzles, Vec3, Vec4};
