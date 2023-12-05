@@ -39,8 +39,8 @@ impl crate::controller::Controller for Controller {
             cursor: Vec2::ZERO,
             drag_start: Vec2::ZERO,
             drag_end: Vec2::ZERO,
-            camera: Vec2::ZERO,
-            zoom: 1.0,
+            camera: vec2(100.0, -100.0),
+            zoom: 10.0,
             mouse_button_pressed: false,
 
             scroll: 1.0,
