@@ -6,11 +6,15 @@ use winit::event::{ElementState, MouseScrollDelta};
 use winit::{dpi::PhysicalPosition, event::MouseButton};
 
 #[derive(Clone, Copy)]
-pub struct Options {}
+pub struct Options {
+    pub use_antisnowflake: bool,
+}
 
 impl Options {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            use_antisnowflake: false,
+        }
     }
 }
 
@@ -116,6 +120,8 @@ impl crate::controller::Controller for Controller {
             translate_x: self.camera.x,
             translate_y: self.camera.y,
             mouse_button_pressed: !(1 << self.mouse_button_pressed as u32),
+
+            use_antisnowflake: self.options.use_antisnowflake as u32,
         };
         self.finish_update();
     }

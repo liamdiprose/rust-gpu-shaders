@@ -59,8 +59,14 @@ pub fn main_fs(
 
     let mut col = Vec3::ZERO;
 
-    let n = 1.0 + 8.0 * (1.0 + cursor.length()).log2();
-    let d = koch_snowflake(uv, 0.8, n as u32);
+    let n = 8.0 * (1.0 + cursor.length()).log2();
+
+    let r = 0.8;
+    let d = if constants.use_antisnowflake != 0 {
+        koch_antisnowflake(uv - vec2(0.0, -r / 8.0), r, n as u32)
+    } else {
+        koch_snowflake(uv, r, n as u32)
+    };
 
     col += smoothstep(1.0 / (constants.height as f32), 0.0, d.abs());
 
