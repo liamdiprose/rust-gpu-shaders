@@ -101,6 +101,12 @@ impl crate::controller::Controller for Controller {
         self.camera *= 1.0 / self.scroll;
         self.camera += self.drag;
 
+        let x = -0.08443636;
+        let y = -0.087451585;
+        if self.zoom <= 0.000059387916 {
+            self.zoom *= 255.2727140652654;
+        }
+
         self.shader_constants = ShaderConstants {
             width: width,
             height: height,
@@ -116,6 +122,9 @@ impl crate::controller::Controller for Controller {
             translate_x: self.camera.x,
             translate_y: self.camera.y,
             mouse_button_pressed: !(1 << self.mouse_button_pressed as u32),
+
+            x,
+            y,
         };
         self.finish_update();
     }
