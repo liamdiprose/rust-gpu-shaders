@@ -7,6 +7,7 @@ pub enum Shape {
     Circle,
     Rectangle,
     EquilateralTriangle,
+    IsoscelesTriangle,
 }
 
 impl Shape {

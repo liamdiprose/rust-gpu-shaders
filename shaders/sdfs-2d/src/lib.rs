@@ -26,6 +26,7 @@ fn sdf(
         Circle => sdf::circle(p, radius),
         Rectangle => sdf::rectangle(p, vec2(width, height)),
         EquilateralTriangle => sdf::equilateral_triangle(p, radius),
+        IsoscelesTriangle => sdf::isosceles_triangle(p, vec2(width, height)),
     }
 }
 
