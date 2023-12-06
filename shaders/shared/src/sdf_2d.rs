@@ -8,7 +8,7 @@ pub fn circle(p: Vec2, r: f32) -> f32 {
 }
 
 pub fn rectangle(p: Vec2, dim: Vec2) -> f32 {
-    let v = p.abs() - dim;
+    let v = p.abs() - dim / 2.0;
     let e = v.max(Vec2::ZERO).length();
     let i = v.max_element().min(0.0);
     e + i
@@ -57,7 +57,7 @@ pub fn equilateral_triangle(mut p: Vec2, r: f32) -> f32 {
     p.x = p.x.abs();
     let k = 3.0.sqrt();
 
-    Float::max(
+    ops::intersection(
         plane_ray(p - vec2(r, -r / k), Vec2::NEG_X),
         plane_segment(p, vec2(0.0, 2.0 * r / k), vec2(r, -r / k)),
     )

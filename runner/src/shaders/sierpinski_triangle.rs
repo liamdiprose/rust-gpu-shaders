@@ -1,5 +1,4 @@
 use bytemuck::Zeroable;
-use egui::{vec2, Vec2};
 use shared::push_constants::sierpinski_triangle::ShaderConstants;
 use winit::event::{ElementState, MouseScrollDelta};
 use winit::{dpi::PhysicalPosition, event::MouseButton};
