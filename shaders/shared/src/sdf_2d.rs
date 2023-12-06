@@ -1,4 +1,4 @@
-use core::f32::consts::PI;
+use crate::{saturate, PI};
 use spirv_std::glam::{vec2, Vec2};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
@@ -42,7 +42,7 @@ pub fn plane_segment(p: Vec2, a: Vec2, b: Vec2) -> f32 {
 pub fn line_segment(p: Vec2, a: Vec2, b: Vec2) -> f32 {
     let ap = p - a;
     let ab = b - a;
-    let t = (ap.dot(ab) / ab.length_squared()).clamp(0.0, 1.0);
+    let t = saturate(ap.dot(ab) / ab.length_squared());
     let c = a + t * ab;
     p.distance(c)
 }
@@ -55,16 +55,9 @@ pub fn torus(p: Vec2, r: Vec2) -> f32 {
     (p.length() - r.x).abs() - r.y
 }
 
-pub fn equilateral_triangle(mut p: Vec2, r: f32) -> f32 {
-    if r == 0.0 {
-        return p.length();
-    }
-    p.x = p.x.abs();
+pub fn equilateral_triangle(p: Vec2, r: f32) -> f32 {
     let (s, c) = (PI / 6.0).sin_cos();
-    ops::intersection(
-        plane_ray(p - vec2(r * c, -r * s), Vec2::NEG_X),
-        plane_segment(p, vec2(0.0, r), vec2(r * c, -r * s)),
-    )
+    isosceles_triangle(p - vec2(0.0, 0.5 * r * s), vec2(2.0 * r * c, r + r * s))
 }
 
 pub fn isosceles_triangle(p: Vec2, dim: Vec2) -> f32 {
