@@ -1,5 +1,5 @@
 use crate::{saturate, PI};
-use spirv_std::glam::{vec2, Vec2};
+use spirv_std::glam::{vec2, BVec3, Vec2};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 
@@ -69,4 +69,23 @@ pub fn isosceles_triangle(p: Vec2, dim: Vec2) -> f32 {
         plane_ray(p - vec2(dim.x / 2.0, 0.0), Vec2::NEG_X),
         plane_segment(p, vec2(0.0, dim.y), vec2(dim.x / 2.0, 0.0)),
     )
+}
+
+/// https://www.shadertoy.com/view/wdBXRW
+pub fn polygon<const N: usize>(p: Vec2, ps: &[Vec2; N]) -> f32 {
+    let mut d = (p - ps[0]).length_squared();
+    let mut s = 1.0;
+    let mut j = N - 1;
+    for i in 0..N {
+        let e = ps[j] - ps[i];
+        let w = p - ps[i];
+        let b = w - e * saturate(w.dot(e) / e.length_squared());
+        d = d.min(b.length_squared());
+        let c = BVec3::new(p.y >= ps[i].y, p.y < ps[j].y, e.x * w.y > e.y * w.x);
+        if c.all() || (!c).all() {
+            s = -s;
+        }
+        j = i;
+    }
+    s * d.sqrt()
 }
