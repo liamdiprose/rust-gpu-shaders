@@ -3,15 +3,16 @@ use glam::{vec2, Vec2};
 use shared::push_constants::sdfs_2d::{Params, ShaderConstants, Shape};
 use shared::PI;
 use std::time::{Duration, Instant};
+use strum::IntoEnumIterator;
 use winit::event::{ElementState, MouseScrollDelta};
 use winit::{dpi::PhysicalPosition, event::MouseButton};
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Options {
     pub shape: Shape,
     pub can_drag: bool,
     pub is_dragging: bool,
-    pub params: Params,
+    pub params: Vec<Params>,
 }
 
 impl Options {
@@ -20,16 +21,7 @@ impl Options {
             shape: Shape::Circle,
             can_drag: false,
             is_dragging: false,
-            params: Params {
-                dim1: 0.3,
-                dim2: 0.2,
-                x0: 0.0,
-                y0: 0.0,
-                x1: 0.1,
-                y1: 0.2,
-                x2: -0.4,
-                y2: 0.3,
-            },
+            params: Shape::iter().map(|shape| shape.params()).collect(),
         }
     }
 }
@@ -103,7 +95,7 @@ impl crate::controller::Controller for Controller {
         let options = &mut options.sdfs_2d;
         options.can_drag = self.can_drag.is_some();
         options.is_dragging = self.drag_point.is_some();
-        self.options = *options;
+        self.options = options.clone();
         self.elapsed = self.start.elapsed();
 
         self.shader_constants = ShaderConstants {
@@ -124,7 +116,7 @@ impl crate::controller::Controller for Controller {
                 y1: self.points[1].y,
                 x2: self.points[2].x,
                 y2: self.points[2].y,
-                ..self.options.params
+                ..self.options.params[self.options.shape as usize]
             },
         };
     }

@@ -56,6 +56,20 @@ impl Shape {
             },
         }
     }
+
+    pub fn params(&self) -> Params {
+        let is_radial = self.spec().is_radial;
+        Params {
+            dim1: if is_radial { 0.2 } else { 0.5 },
+            dim2: if is_radial { 0.1 } else { 0.2 },
+            x0: 0.0,
+            y0: 0.0,
+            x1: 0.2,
+            y1: 0.2,
+            x2: -0.4,
+            y2: 0.35,
+        }
+    }
 }
 
 pub struct ShapeSpec {
