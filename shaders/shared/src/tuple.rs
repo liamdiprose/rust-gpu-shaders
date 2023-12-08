@@ -1,10 +1,11 @@
 pub use tuple::Map;
 
 pub trait MinElement {
-    fn min_element(self) -> f32;
+    type Output;
+    fn min_element(self) -> Self::Output;
 }
 
-pub trait Zip<T> {
+pub trait Zip {
     type Output;
     fn zip(self, other: Self) -> Self::Output;
 }
@@ -28,11 +29,12 @@ macro_rules! tuple_impls {
     ( $( $idx:tt )+ ) => {
         impl MinElement for ($(replace_expr!($idx f32),)+)
         {
-            fn min_element(self) -> f32 {
+            type Output = f32;
+            fn min_element(self) -> Self::Output {
                 min!($(self.$idx),+)
             }
         }
-        impl<T> Zip<T> for ($(replace_expr!($idx T),)+) {
+        impl<T> Zip for ($(replace_expr!($idx T),)+) {
             type Output = ($(replace_expr!($idx (T, T)),)+);
             fn zip(self, other: Self) -> Self::Output {
                  ($((self.$idx, other.$idx)),+,)
