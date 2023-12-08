@@ -19,14 +19,50 @@ impl Shape {
             unsafe { core::mem::transmute(x) }
         }
     }
+
+    pub fn spec(self) -> ShapeSpec {
+        use Shape::*;
+        match self {
+            Circle => ShapeSpec {
+                num_dims: 1,
+                num_points: 0,
+                is_radial: true,
+            },
+            Rectangle => ShapeSpec {
+                num_dims: 2,
+                num_points: 0,
+                is_radial: false,
+            },
+            EquilateralTriangle => ShapeSpec {
+                num_dims: 1,
+                num_points: 0,
+                is_radial: true,
+            },
+            IsoscelesTriangle => ShapeSpec {
+                num_dims: 2,
+                num_points: 0,
+                is_radial: false,
+            },
+            Triangle => ShapeSpec {
+                num_dims: 0,
+                num_points: 3,
+                is_radial: false,
+            },
+        }
+    }
+}
+
+pub struct ShapeSpec {
+    pub num_dims: u32,
+    pub num_points: u32,
+    pub is_radial: bool,
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
 pub struct Params {
-    pub radius: f32,
-    pub width: f32,
-    pub height: f32,
+    pub dim1: f32,
+    pub dim2: f32,
     pub x0: f32,
     pub y0: f32,
     pub x1: f32,

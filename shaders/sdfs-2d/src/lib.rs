@@ -14,9 +14,8 @@ fn sdf(
     shape: u32,
     rotation: f32,
     Params {
-        radius,
-        width,
-        height,
+        dim1,
+        dim2,
         x0,
         y0,
         x1,
@@ -27,6 +26,9 @@ fn sdf(
     }: Params,
 ) -> f32 {
     use Shape::*;
+    let radius = dim1;
+    let width = dim1;
+    let height = dim2;
     let p0 = vec2(x0, y0);
     let p1 = vec2(x1, y1);
     let p2 = vec2(x2, y2);

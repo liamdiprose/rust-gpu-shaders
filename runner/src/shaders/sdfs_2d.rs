@@ -21,9 +21,8 @@ impl Options {
             can_drag: false,
             is_dragging: false,
             params: Params {
-                radius: 0.25,
-                width: 0.5,
-                height: 0.3,
+                dim1: 0.3,
+                dim2: 0.2,
                 x0: 0.0,
                 y0: 0.0,
                 x1: 0.1,
@@ -83,7 +82,7 @@ impl crate::controller::Controller for Controller {
         self.cursor = vec2(position.x as f32, position.y as f32);
         if let Some(i) = self.drag_point {
             self.points[i] = rotate(&self.from_pixels(self.cursor), self.rotation);
-        } else {
+        } else if self.options.shape.spec().num_points > 0 {
             self.can_drag = self.points.iter().position(|p| {
                 (rotate(p, -self.rotation) - self.from_pixels(self.cursor)).length() < 0.01
             });
