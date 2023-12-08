@@ -39,6 +39,7 @@ fn sdf(
         EquilateralTriangle => sdf::equilateral_triangle(p, radius),
         IsoscelesTriangle => sdf::isosceles_triangle(p, vec2(width, height)),
         Triangle => sdf::triangle(p, p0, p1, p2),
+        Capsule => sdf::capsule(p, p0, p1, radius),
     }
 }
 

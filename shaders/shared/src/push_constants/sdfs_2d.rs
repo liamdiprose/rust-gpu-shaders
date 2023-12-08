@@ -9,6 +9,7 @@ pub enum Shape {
     EquilateralTriangle,
     IsoscelesTriangle,
     Triangle,
+    Capsule,
 }
 
 impl Shape {
@@ -47,6 +48,11 @@ impl Shape {
                 num_dims: 0,
                 num_points: 3,
                 is_radial: false,
+            },
+            Capsule => ShapeSpec {
+                num_dims: 1,
+                num_points: 2,
+                is_radial: true,
             },
         }
     }
