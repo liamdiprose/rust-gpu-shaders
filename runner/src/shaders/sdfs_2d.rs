@@ -72,10 +72,11 @@ impl crate::controller::Controller for Controller {
 
     fn mouse_move(&mut self, position: PhysicalPosition<f64>) {
         self.cursor = vec2(position.x as f32, position.y as f32);
+        let num_points = self.options.shape.spec().num_points;
         if let Some(i) = self.drag_point {
             self.points[i] = rotate(&self.from_pixels(self.cursor), self.rotation);
-        } else if self.options.shape.spec().num_points > 0 {
-            self.can_drag = self.points.iter().position(|p| {
+        } else if num_points > 0 {
+            self.can_drag = self.points[0..num_points as usize].iter().position(|p| {
                 (rotate(p, -self.rotation) - self.from_pixels(self.cursor)).length() < 0.01
             });
         }
