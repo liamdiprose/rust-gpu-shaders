@@ -94,7 +94,7 @@ impl crate::controller::Controller for Controller {
         };
     }
 
-    fn update(&mut self, width: u32, height: u32, options: crate::shaders::Options) {
+    fn update(&mut self, width: u32, height: u32, options: &mut crate::shaders::Options) {
         self.options = options.ray_marching;
         self.elapsed = self.start.elapsed();
         self.zoom *= self.scroll;

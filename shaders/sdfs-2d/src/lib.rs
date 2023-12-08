@@ -17,16 +17,26 @@ fn sdf(
         radius,
         width,
         height,
+        x0,
+        y0,
+        x1,
+        y1,
+        x2,
+        y2,
         ..
     }: Params,
 ) -> f32 {
     use Shape::*;
+    let p0 = vec2(x0, y0);
+    let p1 = vec2(x1, y1);
+    let p2 = vec2(x2, y2);
     let p = p.rotate(Vec2::from_angle(rotation));
     match Shape::from_u32(shape) {
         Circle => sdf::circle(p, radius),
         Rectangle => sdf::rectangle(p, vec2(width, height)),
         EquilateralTriangle => sdf::equilateral_triangle(p, radius),
         IsoscelesTriangle => sdf::isosceles_triangle(p, vec2(width, height)),
+        Triangle => sdf::triangle(p, p0, p1, p2),
     }
 }
 

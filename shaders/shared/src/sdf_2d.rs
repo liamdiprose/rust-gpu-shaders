@@ -1,3 +1,4 @@
+use crate::tuple::{Map, MinElement, Zip};
 use crate::{saturate, PI};
 use spirv_std::glam::{vec2, BVec3, Vec2};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
@@ -71,7 +72,22 @@ pub fn isosceles_triangle(p: Vec2, dim: Vec2) -> f32 {
     )
 }
 
-/// https://www.shadertoy.com/view/wdBXRW
+/// https://iquilezles.org/articles/distfunctions2d/
+pub fn triangle(p: Vec2, p0: Vec2, p1: Vec2, p2: Vec2) -> f32 {
+    let e = (p1 - p0, p2 - p1, p0 - p2);
+    let w = (p - p0, p - p1, p - p2);
+    let ew = e.zip(w);
+    let sgn = {
+        let s = (e.0.x * e.2.y - e.0.y * e.2.x).signum();
+        -ew.map(|(e, w)| s * (w.x * e.y - w.y * e.x))
+            .min_element()
+            .signum()
+    };
+    let d = ew.map(|(e, w)| (w - e * saturate(w.dot(e) / e.length_squared())).length_squared());
+    sgn * (p - p0).length_squared().min(d.min_element()).sqrt()
+}
+
+/// https://iquilezles.org/articles/distfunctions2d/
 pub fn polygon<const N: usize>(p: Vec2, ps: &[Vec2; N]) -> f32 {
     let mut d = (p - ps[0]).length_squared();
     let mut s = 1.0;

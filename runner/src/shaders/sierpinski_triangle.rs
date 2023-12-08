@@ -36,7 +36,7 @@ impl crate::controller::Controller for Controller {
         };
     }
 
-    fn update(&mut self, width: u32, height: u32, _options: crate::shaders::Options) {
+    fn update(&mut self, width: u32, height: u32, _options: &mut crate::shaders::Options) {
         let c = 59.87868500430847;
         let v = 34.102688577484;
         let scroll = if self.scroll > c {

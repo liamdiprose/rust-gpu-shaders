@@ -8,6 +8,7 @@ pub enum Shape {
     Rectangle,
     EquilateralTriangle,
     IsoscelesTriangle,
+    Triangle,
 }
 
 impl Shape {
@@ -26,8 +27,12 @@ pub struct Params {
     pub radius: f32,
     pub width: f32,
     pub height: f32,
-    pub x: f32,
-    pub y: f32,
+    pub x0: f32,
+    pub y0: f32,
+    pub x1: f32,
+    pub y1: f32,
+    pub x2: f32,
+    pub y2: f32,
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]
