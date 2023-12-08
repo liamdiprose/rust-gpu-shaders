@@ -13,7 +13,7 @@ fn sierpinski_triangle(mut p: Vec2, mut r: f32, m: u32) -> f32 {
     let n = Vec2::from_angle(-PI / 3.0);
     let c = (PI / 6.0).cos();
 
-    let mut d = sdf::equilateral_triangle(p, r);
+    let mut d = sdf::equilateral_triangle(p, r / c);
     r /= SQRT_3;
 
     for _ in 0..m {
@@ -25,9 +25,9 @@ fn sierpinski_triangle(mut p: Vec2, mut r: f32, m: u32) -> f32 {
                 sdf::plane_ray(p - vec2(c * r, 0.5 * r), Vec2::NEG_X),
             ),
         );
-        r = 0.5 * r;
-        p = vec2(p.x - 2.0 * c * r, p.y + r);
-        p -= n * n.dot(p - vec2(0.0, 2.0 * r)).min(0.0) * 2.0;
+        p = vec2(p.x - c * r, p.y + r * 0.5);
+        p -= n * n.dot(p - vec2(0.0, r)).min(0.0) * 2.0;
+        r *= 0.5;
     }
 
     d
