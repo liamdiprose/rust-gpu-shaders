@@ -27,6 +27,7 @@ fn sdf(
 ) -> f32 {
     use Shape::*;
     let radius = dim1;
+    let radius2 = dim2;
     let width = dim1;
     let height = dim2;
     let p0 = vec2(x0, y0);
@@ -40,6 +41,7 @@ fn sdf(
         IsoscelesTriangle => sdf::isosceles_triangle(p, vec2(width, height)),
         Triangle => sdf::triangle(p, p0, p1, p2),
         Capsule => sdf::capsule(p, p0, p1, radius),
+        Torus => sdf::torus(p, vec2(radius, radius2)),
     }
 }
 

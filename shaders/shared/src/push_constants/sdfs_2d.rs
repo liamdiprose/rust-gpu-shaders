@@ -10,6 +10,7 @@ pub enum Shape {
     IsoscelesTriangle,
     Triangle,
     Capsule,
+    Torus,
 }
 
 impl Shape {
@@ -54,6 +55,11 @@ impl Shape {
                 num_points: 2,
                 is_radial: true,
             },
+            Torus => ShapeSpec {
+                num_dims: 2,
+                num_points: 0,
+                is_radial: true,
+            },
         }
     }
 
@@ -61,7 +67,7 @@ impl Shape {
         let is_radial = self.spec().is_radial;
         Params {
             dim1: if is_radial { 0.2 } else { 0.5 },
-            dim2: if is_radial { 0.1 } else { 0.2 },
+            dim2: if is_radial { 0.05 } else { 0.2 },
             x0: 0.0,
             y0: 0.0,
             x1: 0.2,
