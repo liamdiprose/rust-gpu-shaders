@@ -1,7 +1,8 @@
 use bytemuck::Zeroable;
-use egui::{vec2, Vec2};
+use egui::{vec2, Context, Vec2};
 use shared::push_constants::koch_snowflake::ShaderConstants;
 use std::time::{Duration, Instant};
+use winit::dpi::PhysicalSize;
 use winit::event::{ElementState, MouseScrollDelta};
 use winit::{dpi::PhysicalPosition, event::MouseButton};
 
@@ -19,6 +20,7 @@ impl Options {
 }
 
 pub struct Controller {
+    size: PhysicalSize<u32>,
     start: Instant,
     elapsed: Duration,
     cursor: Vec2,
@@ -36,8 +38,9 @@ pub struct Controller {
 }
 
 impl crate::controller::Controller for Controller {
-    fn new() -> Self {
+    fn new(size: PhysicalSize<u32>) -> Self {
         Self {
+            size,
             start: Instant::now(),
             elapsed: Duration::ZERO,
             cursor: Vec2::ZERO,
@@ -98,18 +101,20 @@ impl crate::controller::Controller for Controller {
         };
     }
 
-    fn update(&mut self, width: u32, height: u32, options: &mut crate::shaders::Options) {
-        self.options = options.koch_snowflake;
+    fn resize(&mut self, size: PhysicalSize<u32>) {
+        self.size.width = size.width;
+        self.size.height = size.height;
+    }
+
+    fn update(&mut self) {
         self.elapsed = self.start.elapsed();
         self.zoom *= self.scroll;
         self.camera *= 1.0 / self.scroll;
         self.camera += self.drag;
-
         self.shader_constants = ShaderConstants {
-            width: width,
-            height: height,
+            width: self.size.width,
+            height: self.size.height,
             time: self.elapsed.as_secs_f32(),
-
             cursor_x: self.cursor.x,
             cursor_y: self.cursor.y,
             drag_start_x: self.drag_start.x,
@@ -128,6 +133,11 @@ impl crate::controller::Controller for Controller {
 
     fn push_constants(&self) -> &[u8] {
         bytemuck::bytes_of(&self.shader_constants)
+    }
+
+    fn ui(&mut self, _ctx: &Context, ui: &mut egui::Ui) {
+        ui.radio_value(&mut self.options.use_antisnowflake, false, "Snowflake");
+        ui.radio_value(&mut self.options.use_antisnowflake, true, "AntiSnowflake");
     }
 }
 

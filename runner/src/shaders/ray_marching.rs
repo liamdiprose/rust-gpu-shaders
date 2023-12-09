@@ -2,19 +2,12 @@ use bytemuck::Zeroable;
 use egui::{vec2, Vec2};
 use shared::push_constants::ray_marching::ShaderConstants;
 use std::time::{Duration, Instant};
+use winit::dpi::PhysicalSize;
 use winit::event::{ElementState, MouseScrollDelta};
 use winit::{dpi::PhysicalPosition, event::MouseButton};
 
-#[derive(Clone, Copy)]
-pub struct Options {}
-
-impl Options {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
 pub struct Controller {
+    size: PhysicalSize<u32>,
     start: Instant,
     elapsed: Duration,
     cursor: Vec2,
@@ -27,13 +20,13 @@ pub struct Controller {
     scroll: f32,
     drag: Vec2,
     prev_cursor: Vec2,
-    options: Options,
     shader_constants: ShaderConstants,
 }
 
 impl crate::controller::Controller for Controller {
-    fn new() -> Self {
+    fn new(size: PhysicalSize<u32>) -> Self {
         Self {
+            size,
             start: Instant::now(),
             elapsed: Duration::ZERO,
             cursor: Vec2::ZERO,
@@ -46,7 +39,6 @@ impl crate::controller::Controller for Controller {
             scroll: 1.0,
             drag: Vec2::ZERO,
             prev_cursor: Vec2::ZERO,
-            options: Options::new(),
             shader_constants: ShaderConstants::zeroed(),
         }
     }
@@ -94,17 +86,19 @@ impl crate::controller::Controller for Controller {
         };
     }
 
-    fn update(&mut self, width: u32, height: u32, options: &mut crate::shaders::Options) {
-        self.options = options.ray_marching;
+    fn resize(&mut self, size: PhysicalSize<u32>) {
+        self.size.width = size.width;
+        self.size.height = size.height;
+    }
+
+    fn update(&mut self) {
         self.elapsed = self.start.elapsed();
         self.zoom *= self.scroll;
         self.camera += self.drag;
-
         self.shader_constants = ShaderConstants {
-            width: width,
-            height: height,
+            width: self.size.width,
+            height: self.size.height,
             time: self.elapsed.as_secs_f32(),
-
             cursor_x: self.cursor.x,
             cursor_y: self.cursor.y,
             drag_start_x: self.drag_start.x,

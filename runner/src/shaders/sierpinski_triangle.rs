@@ -1,26 +1,22 @@
 use bytemuck::Zeroable;
 use shared::push_constants::sierpinski_triangle::ShaderConstants;
+use winit::dpi::PhysicalSize;
 use winit::event::{ElementState, MouseScrollDelta};
 use winit::{dpi::PhysicalPosition, event::MouseButton};
 
-#[derive(Clone, Copy)]
-pub struct Options {}
-
-impl Options {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
 pub struct Controller {
+    size: PhysicalSize<u32>,
     scroll: f64,
+    zoom: f32,
     shader_constants: ShaderConstants,
 }
 
 impl crate::controller::Controller for Controller {
-    fn new() -> Self {
+    fn new(size: PhysicalSize<u32>) -> Self {
         Self {
+            size,
             scroll: 0.0,
+            zoom: 0.0,
             shader_constants: ShaderConstants::zeroed(),
         }
     }
@@ -36,7 +32,12 @@ impl crate::controller::Controller for Controller {
         };
     }
 
-    fn update(&mut self, width: u32, height: u32, _options: &mut crate::shaders::Options) {
+    fn resize(&mut self, size: PhysicalSize<u32>) {
+        self.size.width = size.width;
+        self.size.height = size.height;
+    }
+
+    fn update(&mut self) {
         let c = 59.87868500430847;
         let v = 34.102688577484;
         let scroll = if self.scroll > c {
@@ -46,12 +47,12 @@ impl crate::controller::Controller for Controller {
         } else {
             self.scroll
         };
-        let zoom = 0.85_f64.powf(scroll);
+        self.zoom = 0.85_f64.powf(scroll) as f32;
 
         self.shader_constants = ShaderConstants {
-            width: width,
-            height: height,
-            zoom: zoom as f32,
+            width: self.size.width,
+            height: self.size.height,
+            zoom: self.zoom,
             x: -0.08443636,
             y: -0.087451585,
         };

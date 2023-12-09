@@ -1,9 +1,11 @@
 use bytemuck::Zeroable;
+use egui::{Context, CursorIcon};
 use glam::{vec2, Vec2};
 use shared::push_constants::sdfs_2d::{Params, ShaderConstants, Shape};
 use shared::PI;
 use std::time::{Duration, Instant};
 use strum::IntoEnumIterator;
+use winit::dpi::PhysicalSize;
 use winit::event::{ElementState, MouseScrollDelta};
 use winit::{dpi::PhysicalPosition, event::MouseButton};
 
@@ -27,6 +29,7 @@ impl Options {
 }
 
 pub struct Controller {
+    size: PhysicalSize<u32>,
     start: Instant,
     elapsed: Duration,
     cursor: Vec2,
@@ -40,8 +43,9 @@ pub struct Controller {
 }
 
 impl crate::controller::Controller for Controller {
-    fn new() -> Self {
+    fn new(size: PhysicalSize<u32>) -> Self {
         Self {
+            size,
             start: Instant::now(),
             elapsed: Duration::ZERO,
             cursor: Vec2::ZERO,
@@ -92,23 +96,25 @@ impl crate::controller::Controller for Controller {
             };
     }
 
-    fn update(&mut self, width: u32, height: u32, options: &mut crate::shaders::Options) {
-        let options = &mut options.sdfs_2d;
-        options.can_drag = self.can_drag.is_some();
-        options.is_dragging = self.drag_point.is_some();
-        self.options = options.clone();
+    fn resize(&mut self, size: PhysicalSize<u32>) {
+        self.size.width = size.width;
+        self.size.height = size.height;
+    }
+
+    fn update(&mut self) {
+        self.options.can_drag = self.can_drag.is_some();
+        self.options.is_dragging = self.drag_point.is_some();
         self.elapsed = self.start.elapsed();
-
         self.shader_constants = ShaderConstants {
-            width,
-            height,
+            width: self.size.width,
+            height: self.size.height,
             time: self.elapsed.as_secs_f32(),
-
             cursor_x: self.cursor.x,
             cursor_y: self.cursor.y,
             mouse_button_pressed: !(1
                 << (self.mouse_button_pressed && !self.options.is_dragging) as u32),
             rotation: self.rotation,
+
             shape: self.options.shape as u32,
             params: Params {
                 x0: self.points[0].x,
@@ -125,6 +131,54 @@ impl crate::controller::Controller for Controller {
     fn push_constants(&self) -> &[u8] {
         bytemuck::bytes_of(&self.shader_constants)
     }
+
+    fn ui(&mut self, ctx: &Context, ui: &mut egui::Ui) {
+        ctx.set_cursor_icon(if self.options.is_dragging {
+            CursorIcon::Grabbing
+        } else if self.options.can_drag {
+            CursorIcon::Grab
+        } else {
+            CursorIcon::Default
+        });
+        for shape in Shape::iter() {
+            ui.radio_value(&mut self.options.shape, shape, shape.to_string());
+        }
+        let spec = self.options.shape.spec();
+        if spec.num_dims > 0 {
+            let params = &mut self.options.params[self.options.shape as usize];
+            let (dim1_max, dim2_max, dim1_label, dim2_label) = {
+                if spec.is_radial {
+                    (0.5, params.dim1, "Radius", "Radius2")
+                } else {
+                    (
+                        (self.shader_constants.width as f32)
+                            / (self.shader_constants.height as f32),
+                        1.0,
+                        "Width",
+                        "Height",
+                    )
+                }
+            };
+            ui.horizontal(|ui| {
+                ui.label(dim1_label);
+                ui.add(
+                    egui::DragValue::new(&mut params.dim1)
+                        .clamp_range(0.0..=dim1_max)
+                        .speed(0.01),
+                );
+            });
+            if spec.num_dims > 1 {
+                ui.horizontal(|ui| {
+                    ui.label(dim2_label);
+                    ui.add(
+                        egui::DragValue::new(&mut params.dim2)
+                            .clamp_range(0.0..=dim2_max)
+                            .speed(0.01),
+                    );
+                });
+            }
+        }
+    }
 }
 
 impl Controller {
@@ -132,10 +186,10 @@ impl Controller {
         let p = vec2(p.x, -p.y);
         (p - 0.5
             * vec2(
-                self.shader_constants.width as f32,
-                -(self.shader_constants.height as f32),
+                self.size.width as f32,
+                -(self.size.height as f32),
             ))
-            / self.shader_constants.height as f32
+            / self.size.height as f32
     }
 }
 
