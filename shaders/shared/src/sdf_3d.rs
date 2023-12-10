@@ -3,8 +3,9 @@ use spirv_std::num_traits::Float;
 
 pub mod ops;
 
-pub fn plane(p: Vec3) -> f32 {
-    p.y
+/// d must be normalized or else it will scale space
+pub fn plane(p: Vec3, d: Vec3) -> f32 {
+    d.dot(p)
 }
 
 pub fn sphere(p: Vec3, r: f32) -> f32 {
@@ -48,5 +49,8 @@ pub fn cylinder(p: Vec3, ab: Vec3, r: f32) -> f32 {
 }
 
 pub fn cuboid(p: Vec3, dim: Vec3) -> f32 {
-    (p.abs() - dim).max(Vec3::ZERO).length()
+    let v = p.abs() - dim / 2.0;
+    let e = v.max(Vec3::ZERO).length();
+    let i = v.max_element().min(0.0);
+    e + i
 }
