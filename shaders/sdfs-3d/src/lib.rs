@@ -4,7 +4,7 @@ use push_constants::sdfs_3d::ShaderConstants;
 use shared::push_constants::sdfs_3d::{sdf_shape, Shape};
 use shared::*;
 use shared::{push_constants::sdfs_3d::Params, sdf_3d as sdf, sdf_3d::ops};
-use spirv_std::glam::{vec2, vec3, Mat3, Vec2, Vec2Swizzles, Vec3, Vec4};
+use spirv_std::glam::{vec2, vec3, Mat3, Vec2, Vec2Swizzles, Vec3, Vec3Swizzles, Vec4};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;
@@ -13,156 +13,74 @@ const MAX_STEPS: u32 = 100;
 const MAX_DIST: f32 = 100.0;
 const SURF_DIST: f32 = 0.0001;
 
-fn slicer_sdf(p: Vec3, slice_z: f32) -> f32 {
-    sdf::plane(p - vec3(0.0, 0.0, slice_z), vec3(0.0, 0.0, 1.0))
+fn sdf(p: Vec3, shape: Shape, slice_z: f32, params: Params) -> f32 {
+    ops::difference(
+        sdf_shape(p, shape, params),
+        sdf::plane(p - slice_z * Vec3::Z, Vec3::Z),
+    )
 }
 
-fn sdf(
-    p: Vec3,
-    shape: Shape,
-    slice_z: f32,
-    mouse_button_pressed: bool,
-    cursor_3d_pos: Vec3,
-    distance: f32,
-    params: Params,
-) -> f32 {
-    let mut d = sdf_shape(p, shape, params);
-    d = ops::union(d, sdf::plane(p - vec3(0.0, -0.5, 0.0), vec3(0.0, 1.0, 0.0)));
-    d = ops::difference(d, slicer_sdf(p, slice_z));
-    d = ops::union(d, sdf::plane(p - vec3(0.0, -0.7, 0.0), vec3(0.0, 1.0, 0.0)));
-    if mouse_button_pressed {
-        let rm = Mat3::from_rotation_x(PI / 2.0);
-        d = ops::union(
-            d,
-            sdf::torus(rm.mul_vec3(p - cursor_3d_pos), vec2(distance, 0.01)),
-        );
-        d = ops::union(d, sdf::sphere(p - cursor_3d_pos, 0.01));
-    }
-    d
+fn distance_texture_sdf(p: Vec3, d: f32) -> f32 {
+    ops::union(vec2(p.xy().length() - d, p.z).length(), p.length())
 }
 
-fn ray_march(
-    ro: Vec3,
-    rd: Vec3,
-    shape: Shape,
-    slice_z: f32,
-    mouse_button_pressed: bool,
-    cursor_3d_pos: Vec3,
-    distance: f32,
-    params: Params,
-) -> (f32, f32) {
+fn ray_march(ro: Vec3, rd: Vec3, shape: Shape, slice_z: f32, params: Params) -> f32 {
     let mut d0 = 0.0;
-    let mut cd = f32::INFINITY;
-
-    // p = vec3(_, _, slice_z)
-    // p.z * x = slice_z
-    // let p = ro + rd * slice_z / p.z;
 
     for _ in 0..MAX_STEPS {
         let p = ro + rd * d0;
-        let ds = sdf(
-            p,
-            shape,
-            slice_z,
-            mouse_button_pressed,
-            cursor_3d_pos,
-            distance,
-            params,
-        );
-        cd = cd.min(ds);
+        let ds = sdf(p, shape, slice_z, params);
         d0 += ds;
-        if ds < SURF_DIST {
-            cd = 0.0;
-            break;
-        }
-        if d0 > MAX_DIST {
+        if ds < SURF_DIST || d0 > MAX_DIST {
             break;
         }
     }
 
-    (d0, cd)
+    d0
 }
 
-fn get_normal(
-    p: Vec3,
-    shape: Shape,
-    slice_z: f32,
-    mouse_button_pressed: bool,
-    cursor_3d_pos: Vec3,
-    distance: f32,
-    params: Params,
-) -> Vec3 {
-    let d = sdf(
-        p,
-        shape,
-        slice_z,
-        mouse_button_pressed,
-        cursor_3d_pos,
-        distance,
-        params,
-    );
-    let e = vec2(0.01, 0.0);
+fn ray_march_distance_texture(ro: Vec3, rd: Vec3, cursor_3d_pos: Vec3, distance: f32) -> f32 {
+    let mut d0 = 0.0;
+
+    for _ in 0..MAX_STEPS {
+        let p = ro + rd * d0;
+        let ds = distance_texture_sdf(p - cursor_3d_pos, distance);
+        d0 += ds;
+        if ds < 0.005 || d0 > MAX_DIST {
+            break;
+        }
+    }
+
+    d0
+}
+
+fn get_d_at_slice(ro: Vec3, rd: Vec3, shape: Shape, slice_z: f32, params: Params) -> f32 {
+    let x = (slice_z - ro.z) / rd.z;
+    let p = ro + rd * x;
+    sdf_shape(p, shape, params)
+}
+
+fn get_normal(p: Vec3, shape: Shape, slice_z: f32, params: Params) -> Vec3 {
+    let d = sdf(p, shape, slice_z, params);
+    let e = 0.01 * Vec2::X;
     let n = d - vec3(
-        sdf(
-            p - e.xyy(),
-            shape,
-            slice_z,
-            mouse_button_pressed,
-            cursor_3d_pos,
-            distance,
-            params,
-        ),
-        sdf(
-            p - e.yxy(),
-            shape,
-            slice_z,
-            mouse_button_pressed,
-            cursor_3d_pos,
-            distance,
-            params,
-        ),
-        sdf(
-            p - e.yyx(),
-            shape,
-            slice_z,
-            mouse_button_pressed,
-            cursor_3d_pos,
-            distance,
-            params,
-        ),
+        sdf(p - e.xyy(), shape, slice_z, params),
+        sdf(p - e.yxy(), shape, slice_z, params),
+        sdf(p - e.yyx(), shape, slice_z, params),
     );
     n.normalize()
 }
 
-fn get_light(
-    p: Vec3,
-    shape: Shape,
-    slice_z: f32,
-    mouse_button_pressed: bool,
-    cursor_3d_pos: Vec3,
-    distance: f32,
-    params: Params,
-) -> f32 {
+fn get_light(p: Vec3, shape: Shape, slice_z: f32, params: Params) -> f32 {
     let light_pos = vec3(1.0, 5.0, -1.0);
     let light_vector = (light_pos - p).normalize();
-    let normal_vector = get_normal(
-        p,
-        shape,
-        slice_z,
-        mouse_button_pressed,
-        cursor_3d_pos,
-        distance,
-        params,
-    );
-    let mut dif = light_vector.dot(normal_vector).clamp(0.0, 1.0);
-    let (d, _) = ray_march(
+    let normal_vector = get_normal(p, shape, slice_z, params);
+    let mut dif = saturate(light_vector.dot(normal_vector));
+    let d = ray_march(
         p + normal_vector * SURF_DIST * 2.0,
         light_vector,
         shape,
         slice_z,
-        mouse_button_pressed,
-        cursor_3d_pos,
-        distance,
         params,
     );
     if d < light_pos.distance(p) {
@@ -189,54 +107,35 @@ pub fn main_fs(
     let cursor_3d_pos = vec3(constants.cursor_x, constants.cursor_y, constants.cursor_z);
 
     let rm = Mat3::from_rotation_y(translate.x).mul_mat3(&Mat3::from_rotation_x(translate.y));
-    let ro = rm.mul_vec3(vec3(0.0, 0.0, -1.0));
-    let rd = rm.mul_vec3(vec3(uv.x, uv.y, 1.0)).normalize();
+    let ro = rm.mul_vec3(-Vec3::Z);
+    let rd = rm.mul_vec3(uv.extend(1.0)).normalize();
 
     let slice_z = constants.slice_z;
     let distance = constants.distance;
 
     let shape = Shape::from_u32(constants.shape);
-    let mouse_button_pressed = constants.mouse_button_pressed & 1 != 0;
-    let (d, cd) = ray_march(
-        ro,
-        rd,
-        shape,
-        slice_z,
-        mouse_button_pressed,
-        cursor_3d_pos,
-        distance,
-        constants.params,
-    );
-    let dif = get_light(
-        ro + rd * d,
-        shape,
-        slice_z,
-        mouse_button_pressed,
-        cursor_3d_pos,
-        distance,
-        constants.params,
-    );
-    let c = cd.abs().atan() / (PI / 2.0);
-    let mut col = vec3(dif, dif, dif)
-        // vec3(0.0,0.0,0.0)
-        .lerp(vec3(1.0 - c, 0.5 - c, 0.2 - c), 0.2);
-    // let col = col.lerp(vec3((cd*10.0).sin(), (cd*10.0).sin(), 0.0),0.1);
-    // let mut col = if d < 100.0 {
-    //     vec3(0.65, 0.85, 1.0)
-    // } else {
-    //     vec3(0.9, 0.6, 0.3)
-    // };
-    // col *= 1.0 - (-6.0 * d.abs()).exp();
-    // col *= 0.8 + 0.2 * (150.0 * d).cos();
-    // col = col.lerp(Vec3::ONE, 1.0 - smoothstep(0.0, 0.01, d.abs()));
-    if d > MAX_DIST {
-        col = vec3(0.2, 0.3, 0.7);
+    let slice_d = get_d_at_slice(ro, rd, shape, slice_z, constants.params);
+    let mut col = if slice_d < 0.0 {
+        vec3(0.65, 0.85, 1.0)
+    } else {
+        let d = ray_march(ro, rd, shape, slice_z, constants.params);
+        if d > MAX_DIST {
+            vec3(0.9, 0.6, 0.3)
+        } else {
+            let dif = get_light(ro + rd * d, shape, slice_z, constants.params);
+            Vec3::splat(dif).lerp(vec3(0.9, 0.6, 0.3), 0.5)
+        }
+    };
+    col *= 1.0 - (-6.0 * slice_d.abs()).exp();
+    col *= 0.8 + 0.2 * (150.0 * slice_d).cos();
+    col = col.lerp(Vec3::ONE, 1.0 - smoothstep(0.0, 0.01, slice_d.abs()));
+    if constants.mouse_button_pressed & 1 != 0 {
+        // TODO: probably can make this more efficient
+        let d = ray_march_distance_texture(ro, rd, cursor_3d_pos, distance);
+        if d < MAX_DIST {
+            col = vec3(1.0, 1.0, 0.0);
+        }
     }
-    // if d < 100.0 {
-    //     vec3(0.65, 0.85, 1.0)
-    // } else {
-    //     vec3(0.9, 0.6, 0.3)
-    // }
 
     *output = col.extend(1.0);
 }
