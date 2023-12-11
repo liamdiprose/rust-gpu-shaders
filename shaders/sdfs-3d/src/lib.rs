@@ -1,9 +1,10 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
-use push_constants::sdfs_3d::ShaderConstants;
-use shared::push_constants::sdfs_3d::{sdf_shape, Shape};
-use shared::*;
-use shared::{push_constants::sdfs_3d::Params, sdf_3d as sdf, sdf_3d::ops};
+use shared::{
+    push_constants::sdfs_3d::{sdf_shape, Params, ShaderConstants, Shape},
+    sdf_3d::{self as sdf, ops},
+    *,
+};
 use spirv_std::glam::{vec2, vec3, Mat3, Vec2, Vec2Swizzles, Vec3, Vec3Swizzles, Vec4};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
@@ -56,8 +57,12 @@ fn ray_march_distance_texture(ro: Vec3, rd: Vec3, cursor_3d_pos: Vec3, distance:
 
 fn get_d_at_slice(ro: Vec3, rd: Vec3, shape: Shape, slice_z: f32, params: Params) -> f32 {
     let x = (slice_z - ro.z) / rd.z;
-    let p = ro + rd * x;
-    sdf_shape(p, shape, params)
+    if x < 0.0 {
+        MAX_DIST
+    } else {
+        let p = ro + rd * x;
+        sdf_shape(p, shape, params)
+    }
 }
 
 fn get_normal(p: Vec3, shape: Shape, slice_z: f32, params: Params) -> Vec3 {
@@ -75,18 +80,7 @@ fn get_light(p: Vec3, shape: Shape, slice_z: f32, params: Params) -> f32 {
     let light_pos = vec3(1.0, 5.0, -1.0);
     let light_vector = (light_pos - p).normalize();
     let normal_vector = get_normal(p, shape, slice_z, params);
-    let mut dif = saturate(light_vector.dot(normal_vector));
-    let d = ray_march(
-        p + normal_vector * SURF_DIST * 2.0,
-        light_vector,
-        shape,
-        slice_z,
-        params,
-    );
-    if d < light_pos.distance(p) {
-        dif *= 0.1;
-    }
-    dif
+    light_vector.dot(normal_vector).clamp(0.1, 1.0)
 }
 
 fn from_pixels(x: f32, y: f32, constants: &ShaderConstants) -> Vec2 {
@@ -115,21 +109,25 @@ pub fn main_fs(
 
     let shape = Shape::from_u32(constants.shape);
     let slice_d = get_d_at_slice(ro, rd, shape, slice_z, constants.params);
-    let mut col = if slice_d < 0.0 {
-        vec3(0.65, 0.85, 1.0)
+    let d = ray_march(ro, rd, shape, slice_z, constants.params);
+    let mut col = if d >= MAX_DIST {
+        vec3(0.9, 0.6, 0.3)
     } else {
-        let d = ray_march(ro, rd, shape, slice_z, constants.params);
-        if d > MAX_DIST {
-            vec3(0.9, 0.6, 0.3)
+        if slice_d < 0.0 {
+            vec3(0.65, 0.85, 1.0)
         } else {
             let dif = get_light(ro + rd * d, shape, slice_z, constants.params);
-            Vec3::splat(dif).lerp(vec3(0.9, 0.6, 0.3), 0.5)
+            Vec3::splat(dif).lerp(vec3(0.9, 0.6, 0.3), 0.3)
         }
     };
-    col *= 1.0 - (-6.0 * slice_d.abs()).exp();
-    col *= 0.8 + 0.2 * (150.0 * slice_d).cos();
-    col = col.lerp(Vec3::ONE, 1.0 - smoothstep(0.0, 0.01, slice_d.abs()));
-    if constants.mouse_button_pressed & 1 != 0 {
+    if slice_d < 1.0 {
+        col *= 1.0 - (-6.0 * slice_d.abs()).exp();
+        col *= 0.8 + 0.2 * (150.0 * slice_d).cos();
+        col = col.lerp(Vec3::ONE, 1.0 - smoothstep(0.0, 0.01, slice_d.abs()));
+    } else {
+        col *= 0.8;
+    }
+    if constants.mouse_button_pressed & 1 != 0 && distance < 1.0 {
         // TODO: probably can make this more efficient
         let d = ray_march_distance_texture(ro, rd, cursor_3d_pos, distance);
         if d < MAX_DIST {
