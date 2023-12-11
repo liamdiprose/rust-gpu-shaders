@@ -51,8 +51,8 @@ impl Shape {
         let is_radial = self.spec().is_radial;
         Params {
             dim1: if is_radial { 0.2 } else { 0.5 },
-            dim2: if is_radial { 0.05 } else { 0.2 },
-            dim3: 0.1,
+            dim2: if is_radial { 0.1 } else { 0.2 },
+            dim3: 0.4,
             x0: 0.0,
             y0: 0.0,
             z0: 0.0,

@@ -1,7 +1,7 @@
 use bytemuck::Zeroable;
 use egui::{Context, CursorIcon};
 use glam::{vec2, vec3, Mat3, Vec2, Vec3, Vec3Swizzles};
-use shared::push_constants::sdfs_3d::{Params, ShaderConstants, Shape, sdf_shape};
+use shared::push_constants::sdfs_3d::{sdf_shape, Params, ShaderConstants, Shape};
 use shared::sdf_3d as sdf;
 use shared::PI;
 use std::time::{Duration, Instant};
@@ -66,7 +66,7 @@ impl crate::controller::Controller for Controller {
             drag_start: Vec2::ZERO,
             drag_end: Vec2::ZERO,
             drag: Vec2::ZERO,
-            camera: Vec2::ZERO,
+            camera: vec2(0.2, -0.1) * size.height as f32,
             scroll: 0.0,
             slice_z: 0.0,
         }
@@ -185,12 +185,7 @@ impl crate::controller::Controller for Controller {
 
                     for _ in 0..MAX_STEPS {
                         let p = ro + rd * d0;
-                        let ds = sdf_shape(
-                            p,
-                            self.options.shape,
-                            params,
-                        )
-                        .abs();
+                        let ds = sdf_shape(p, self.options.shape, params).abs();
                         d0 += ds;
                         if d0 > MAX_DIST {
                             break;
