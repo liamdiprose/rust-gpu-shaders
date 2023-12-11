@@ -40,21 +40,6 @@ fn ray_march(ro: Vec3, rd: Vec3, shape: Shape, slice_z: f32, params: Params) -> 
     d0
 }
 
-fn ray_march_distance_texture(ro: Vec3, rd: Vec3, cursor_3d_pos: Vec3, distance: f32) -> f32 {
-    let mut d0 = 0.0;
-
-    for _ in 0..MAX_STEPS {
-        let p = ro + rd * d0;
-        let ds = distance_texture_sdf(p - cursor_3d_pos, distance);
-        d0 += ds;
-        if ds < 0.005 || d0 > MAX_DIST {
-            break;
-        }
-    }
-
-    d0
-}
-
 fn get_d_at_slice(ro: Vec3, rd: Vec3, shape: Shape, slice_z: f32, params: Params) -> f32 {
     let x = (slice_z - ro.z) / rd.z;
     if x < 0.0 {
@@ -128,10 +113,12 @@ pub fn main_fs(
         col *= 0.8;
     }
     if constants.mouse_button_pressed & 1 != 0 && distance < 1.0 {
-        // TODO: probably can make this more efficient
-        let d = ray_march_distance_texture(ro, rd, cursor_3d_pos, distance);
-        if d < MAX_DIST {
-            col = vec3(1.0, 1.0, 0.0);
+        let x = (slice_z - ro.z) / rd.z;
+        if x >= 0.0 {
+            let p = ro + rd * x;
+            if distance_texture_sdf(p - cursor_3d_pos, distance).abs() < 0.005 {
+                col = vec3(1.0, 1.0, 0.0);
+            }
         }
     }
 
