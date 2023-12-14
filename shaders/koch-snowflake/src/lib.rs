@@ -57,8 +57,6 @@ pub fn main_fs(
     let uv = from_pixels(frag_coord.x, frag_coord.y, constants);
     let cursor = from_pixels(constants.cursor_x, constants.cursor_y, constants);
 
-    let mut col = Vec3::ZERO;
-
     let d = {
         let n = 8.0 * (1.0 + cursor.length()).log2();
         let r = 0.8;
@@ -69,7 +67,7 @@ pub fn main_fs(
         }
     };
 
-    col += smoothstep(1.0 / (constants.height as f32), 0.0, d.abs());
+    let col = Vec3::splat(smoothstep(1.0 / (constants.height as f32), 0.0, d.abs()));
 
     *output = col.extend(1.0);
 }
