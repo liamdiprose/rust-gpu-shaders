@@ -30,3 +30,10 @@ pub fn symmetric_difference(a: f32, b: f32) -> f32 {
     difference(union(a, b), intersection(a, b))
 }
 
+pub fn round(d: f32, r: f32) -> f32 {
+    d - r
+}
+
+pub fn onion(d: f32, r: f32) -> f32 {
+    d.abs() - r
+}
