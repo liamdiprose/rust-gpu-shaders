@@ -13,8 +13,8 @@ pub fn main_fs(
     output: &mut Vec4,
 ) {
     let coord = Complex::new(
-        frag_coord.x + constants.translate_x + (constants.drag_start_x - constants.drag_end_x),
-        frag_coord.y + constants.translate_y + (constants.drag_start_y - constants.drag_end_y),
+        frag_coord.x + constants.translate_x,
+        frag_coord.y + constants.translate_y,
     );
 
     let uv = constants.zoom

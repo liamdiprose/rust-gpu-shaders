@@ -1,41 +1,24 @@
 use bytemuck::Zeroable;
-use egui::{vec2, Vec2, Context};
+use egui::{vec2, Context, Vec2};
 use shared::push_constants::mandelbrot::ShaderConstants;
-use winit::dpi::PhysicalSize;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use winit::event::{ElementState, MouseScrollDelta};
-use winit::{dpi::PhysicalPosition, event::MouseButton};
-
-#[derive(Clone, Copy)]
-pub struct Options {
-    pub exponent: f32,
-    pub num_iterations: u32,
-}
-
-impl Options {
-    pub fn new() -> Self {
-        Self {
-            exponent: 2.0,
-            num_iterations: 35,
-        }
-    }
-}
+use winit::{
+    dpi::{PhysicalPosition, PhysicalSize},
+    event::MouseButton,
+};
 
 pub struct Controller {
     size: PhysicalSize<u32>,
     start: Instant,
-    elapsed: Duration,
     cursor: Vec2,
     drag_start: Vec2,
     drag_end: Vec2,
     camera: Vec2,
     zoom: f32,
     mouse_button_pressed: bool,
-
-    scroll: f32,
-    drag: Vec2,
-    prev_cursor: Vec2,
-    options: Options,
+    exponent: f32,
+    num_iterations: u32,
     shader_constants: ShaderConstants,
 }
 
@@ -44,18 +27,14 @@ impl crate::controller::Controller for Controller {
         Self {
             size,
             start: Instant::now(),
-            elapsed: Duration::ZERO,
             cursor: Vec2::ZERO,
             drag_start: Vec2::ZERO,
             drag_end: Vec2::ZERO,
             camera: Vec2::ZERO,
             zoom: 1.0,
             mouse_button_pressed: false,
-
-            scroll: 1.0,
-            drag: Vec2::ZERO,
-            prev_cursor: Vec2::ZERO,
-            options: Options::new(),
+            exponent: 2.0,
+            num_iterations: 35,
             shader_constants: ShaderConstants::zeroed(),
         }
     }
@@ -65,7 +44,7 @@ impl crate::controller::Controller for Controller {
             self.mouse_button_pressed = match state {
                 ElementState::Pressed => true,
                 ElementState::Released => {
-                    self.drag = self.drag_start - self.drag_end;
+                    self.camera += self.drag_start - self.drag_end;
                     false
                 }
             };
@@ -83,7 +62,7 @@ impl crate::controller::Controller for Controller {
     }
 
     fn mouse_scroll(&mut self, delta: MouseScrollDelta) {
-        self.scroll *= match delta {
+        let scroll = match delta {
             MouseScrollDelta::LineDelta(_, y) => {
                 let v = 1.0 + 0.1 * y.abs();
                 if y < 0.0 {
@@ -101,6 +80,8 @@ impl crate::controller::Controller for Controller {
                 }
             }
         };
+        self.zoom *= scroll;
+        self.camera *= 1.0 / scroll;
     }
 
     fn resize(&mut self, size: PhysicalSize<u32>) {
@@ -109,30 +90,19 @@ impl crate::controller::Controller for Controller {
     }
 
     fn update(&mut self) {
-        self.elapsed = self.start.elapsed();
-        self.zoom *= self.scroll;
-        self.camera *= 1.0 / self.scroll;
-        self.camera += self.drag;
-
         self.shader_constants = ShaderConstants {
             width: self.size.width,
             height: self.size.height,
-            time: self.elapsed.as_secs_f32(),
+            time: self.start.elapsed().as_secs_f32(),
             cursor_x: self.cursor.x,
             cursor_y: self.cursor.y,
-            drag_start_x: self.drag_start.x,
-            drag_start_y: self.drag_start.y,
-            drag_end_x: self.drag_end.x,
-            drag_end_y: self.drag_end.y,
             zoom: self.zoom,
-            translate_x: self.camera.x,
-            translate_y: self.camera.y,
+            translate_x: self.camera.x + self.drag_start.x - self.drag_end.x,
+            translate_y: self.camera.y + self.drag_start.y - self.drag_end.y,
             mouse_button_pressed: !(1 << self.mouse_button_pressed as u32),
-
-            exponent: self.options.exponent,
-            num_iterations: self.options.num_iterations,
+            exponent: self.exponent,
+            num_iterations: self.num_iterations,
         };
-        self.finish_update();
     }
 
     fn push_constants(&self) -> &[u8] {
@@ -143,7 +113,7 @@ impl crate::controller::Controller for Controller {
         ui.horizontal(|ui| {
             ui.label("Exponent:");
             ui.add(
-                egui::DragValue::new(&mut self.options.exponent)
+                egui::DragValue::new(&mut self.exponent)
                     .clamp_range(1.0..=6.0)
                     .speed(0.1),
             );
@@ -151,18 +121,10 @@ impl crate::controller::Controller for Controller {
         ui.horizontal(|ui| {
             ui.label("Num Iterations:");
             ui.add(
-                egui::DragValue::new(&mut self.options.num_iterations)
+                egui::DragValue::new(&mut self.num_iterations)
                     .clamp_range(2..=200)
                     .speed(1),
             );
         });
-    }
-}
-
-impl Controller {
-    pub fn finish_update(&mut self) {
-        self.scroll = 1.0;
-        self.drag = Vec2::ZERO;
-        self.prev_cursor = self.cursor;
     }
 }
