@@ -1,8 +1,6 @@
 use bytemuck::Zeroable;
 use shared::push_constants::sierpinski_triangle::ShaderConstants;
-use winit::dpi::PhysicalSize;
-use winit::event::{ElementState, MouseScrollDelta};
-use winit::{dpi::PhysicalPosition, event::MouseButton};
+use winit::{dpi::PhysicalSize, event::MouseScrollDelta};
 
 pub struct Controller {
     size: PhysicalSize<u32>,
@@ -20,10 +18,6 @@ impl crate::controller::Controller for Controller {
             shader_constants: ShaderConstants::zeroed(),
         }
     }
-
-    fn mouse_input(&mut self, _state: ElementState, _button: MouseButton) {}
-
-    fn mouse_move(&mut self, _position: PhysicalPosition<f64>) {}
 
     fn mouse_scroll(&mut self, delta: MouseScrollDelta) {
         self.scroll += match delta {
