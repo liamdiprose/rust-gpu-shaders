@@ -93,7 +93,7 @@ impl crate::controller::Controller for Controller {
                 }
             }
             MouseScrollDelta::PixelDelta(p) => {
-                let v = 1.0 + 0.1 * (1.0 + p.y.abs() as f32).ln();
+                let v = 1.0 + 0.02 * (1.0 + p.y.abs() as f32).ln();
                 if p.y < 0.0 {
                     v
                 } else {

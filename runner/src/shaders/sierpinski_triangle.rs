@@ -28,7 +28,7 @@ impl crate::controller::Controller for Controller {
     fn mouse_scroll(&mut self, delta: MouseScrollDelta) {
         self.scroll += match delta {
             MouseScrollDelta::LineDelta(_, y) => y as f64,
-            MouseScrollDelta::PixelDelta(p) => 1.0 + 0.1 * (1.0 + p.y).ln(),
+            MouseScrollDelta::PixelDelta(p) => 0.15 * (1.0 + p.y.abs()).ln() * p.y.signum(),
         };
     }
 
