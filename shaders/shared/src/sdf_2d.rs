@@ -27,8 +27,9 @@ pub fn line(p: Vec2, d: Vec2) -> f32 {
     plane(p, d).abs()
 }
 
+/// d must be normalized or else it will scale space
 pub fn ray(p: Vec2, d: Vec2) -> f32 {
-    let t = (p.dot(d) / d.length_squared()).max(0.0);
+    let t = p.dot(d).max(0.0);
     p.distance(t * d)
 }
 

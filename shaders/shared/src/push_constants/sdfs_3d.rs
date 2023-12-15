@@ -90,7 +90,7 @@ pub fn sdf_shape(p: Vec3, shape: Shape, params: Params) -> f32 {
     match shape {
         Sphere => sdf::sphere(p, radius),
         Cuboid => sdf::cuboid(p, vec3(width, height, length)),
-        Capsule => sdf::capsule(p, p0 - p1, radius),
+        Capsule => sdf::capsule(p, p0 , p1, radius),
         Torus => sdf::torus(p, vec2(radius, radius2)),
     }
 }

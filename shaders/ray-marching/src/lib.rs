@@ -19,19 +19,20 @@ macro_rules! min {
 
 fn sdf(p: Vec3, time: f32) -> f32 {
     min!(
-        sdf::plane(p - vec3(0.0, -1.8, 0.0)),
+        sdf::plane(p - vec3(0.0, -1.8, 0.0), Vec3::Y),
         sdf::sphere(
             sdf::ops::repeat_xz(p - vec3(0.0, -2.0, 0.0), vec2(1.0, 1.0)),
-            0.5 + 0.2*time.sin()
+            0.5 + 0.2 * time.sin()
         ),
         sdf::torus(p - vec3(2.0, 1.0, 0.0), vec2(0.6, 0.2)),
         sdf::cuboid(p - vec3(-2.0, 1.0, 0.0), vec3(0.5, 0.3, 0.4)),
         sdf::tetrahedron(p - vec3(4.0, 1.0, 0.0), 0.5),
-        sdf::capsule(p - vec3(-4.5, 1.0, 0.0), vec3(1.0, 0.0, 0.0), 0.5),
-        sdf::line(p - vec3(-0.0, 1.0, 2.0), vec3(1.0, 0.0, 0.0)),
+        sdf::capsule(p, vec3(-5.0, 1.0, 0.0), vec3(-4.0, 1.0, 0.0), 0.5),
+        sdf::line_segment(p, vec3(-0.5, 1.0, 2.0), vec3(0.5, 1.0, 2.0)),
         sdf::cylinder(
             Mat3::from_rotation_y(time).mul_vec3(p - vec3(6.0, 1.0, 0.0)),
-            vec3(1.0, 0.0, 0.0),
+            vec3(-0.5, 0.0, 0.0),
+            vec3(0.5, 0.0, 0.0),
             0.5
         ),
     )
@@ -104,7 +105,7 @@ pub fn main_fs(
     let (d, cd) = ray_march(ro, rd, constants.time);
     let dif = get_light(ro + rd * d, constants.time);
     let c = cd.abs().atan() / (PI / 2.0);
-    let col = vec3(dif, dif, dif).lerp(vec3(1.0-c,0.5-c,0.2-c), 0.2);
+    let col = vec3(dif, dif, dif).lerp(vec3(1.0 - c, 0.5 - c, 0.2 - c), 0.2);
 
     *output = col.extend(1.0);
 }

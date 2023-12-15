@@ -1,11 +1,12 @@
+use crate::saturate;
 use spirv_std::glam::{vec2, Vec2, Vec3, Vec3Swizzles};
 use spirv_std::num_traits::Float;
 
 pub mod ops;
 
-/// d must be normalized or else it will scale space
-pub fn plane(p: Vec3, d: Vec3) -> f32 {
-    d.dot(p)
+/// n must be normalized or else it will scale space
+pub fn plane(p: Vec3, n: Vec3) -> f32 {
+    p.dot(n)
 }
 
 pub fn sphere(p: Vec3, r: f32) -> f32 {
@@ -24,21 +25,21 @@ pub fn tetrahedron(p: Vec3, r: f32) -> f32 {
     (md - r) / 3.0.sqrt()
 }
 
-pub fn line(p: Vec3, ab: Vec3) -> f32 {
-    let a = -ab / 2.0;
+pub fn line_segment(p: Vec3, a: Vec3, b: Vec3) -> f32 {
     let ap = p - a;
-    let t = (ap.dot(ab) / ab.length_squared()).clamp(0.0, 1.0);
+    let ab = b - a;
+    let t = saturate(ap.dot(ab) / ab.length_squared());
     let c = a + t * ab;
     p.distance(c)
 }
 
-pub fn capsule(p: Vec3, ab: Vec3, r: f32) -> f32 {
-    line(p, ab) - r
+pub fn capsule(p: Vec3, a: Vec3, b: Vec3, r: f32) -> f32 {
+    line_segment(p, a, b) - r
 }
 
-pub fn cylinder(p: Vec3, ab: Vec3, r: f32) -> f32 {
-    let a = -ab / 2.0;
+pub fn cylinder(p: Vec3, a: Vec3, b: Vec3, r: f32) -> f32 {
     let ap = p - a;
+    let ab = b - a;
     let t = ap.dot(ab) / ab.length_squared();
     let c = a + t * ab;
     let x = p.distance(c) - r;
