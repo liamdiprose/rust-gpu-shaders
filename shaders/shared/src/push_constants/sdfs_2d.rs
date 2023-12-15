@@ -11,6 +11,12 @@ pub enum Shape {
     Triangle,
     Capsule,
     Torus,
+    Line,
+    Plane,
+    LineSegement,
+    PlaneSegment,
+    Ray,
+    PlaneRay,
 }
 
 impl Shape {
@@ -59,6 +65,36 @@ impl Shape {
                 num_dims: 2,
                 num_points: 0,
                 is_radial: true,
+            },
+            Plane => ShapeSpec {
+                num_dims: 0,
+                num_points: 0,
+                is_radial: false,
+            },
+            Line => ShapeSpec {
+                num_dims: 0,
+                num_points: 0,
+                is_radial: false,
+            },
+            PlaneSegment => ShapeSpec {
+                num_dims: 0,
+                num_points: 2,
+                is_radial: false,
+            },
+            LineSegement => ShapeSpec {
+                num_dims: 0,
+                num_points: 2,
+                is_radial: false,
+            },
+            Ray => ShapeSpec {
+                num_dims: 0,
+                num_points: 1,
+                is_radial: false,
+            },
+            PlaneRay => ShapeSpec {
+                num_dims: 0,
+                num_points: 1,
+                is_radial: false,
             },
         }
     }

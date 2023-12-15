@@ -42,6 +42,12 @@ fn sdf(
         Triangle => sdf::triangle(p, p0, p1, p2),
         Capsule => sdf::capsule(p, p0, p1, radius),
         Torus => sdf::torus(p, vec2(radius, radius2)),
+        Line => sdf::line(p, Vec2::X),
+        Plane => sdf::plane(p, Vec2::X),
+        LineSegement => sdf::line_segment(p, p0, p1),
+        PlaneSegment => sdf::plane_segment(p, p0, p1),
+        Ray => sdf::ray(p - p0, Vec2::X),
+        PlaneRay => sdf::plane_ray(p - p0, Vec2::X),
     }
 }
 
