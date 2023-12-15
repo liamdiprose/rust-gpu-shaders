@@ -37,3 +37,8 @@ pub fn round(d: f32, r: f32) -> f32 {
 pub fn onion(d: f32, r: f32) -> f32 {
     d.abs() - r
 }
+
+pub fn smooth_union(a: f32, b: f32, k: f32) -> f32 {
+    let h = (k - (a - b).abs()).max(0.0) / k;
+    a.min(b) - h * h * k * (1.0 / 4.0)
+}
