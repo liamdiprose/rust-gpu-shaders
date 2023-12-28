@@ -12,3 +12,4 @@ crate-type = ["dylib"]
 [dependencies]
 spirv-std = { workspace = true }
 shared = { path = "../shared" }
+geometric_algebra = { workspace = true }

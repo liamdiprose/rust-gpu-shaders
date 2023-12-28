@@ -9,6 +9,10 @@ use spirv_std::glam::{vec2, vec3, Vec2, Vec3, Vec4};
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;
 
+mod epga2d;
+
+use epga2d::Point;
+
 fn sdf(
     p: Vec2,
     shape: u32,
@@ -66,13 +70,20 @@ pub fn main_fs(
     let cursor = from_pixels(constants.cursor_x, constants.cursor_y, constants);
 
     let col = {
-        let d = sdf(uv, constants.shape, constants.rotation, constants.params);
+        // let d = sdf(uv, constants.shape, constants.rotation, constants.params);
+        let p = Point::new(0, 0, 0);
+        let uv_p = Point::from(uv);
+
+        let translated_d = (p - uv_p);
+
+        let d = translated_d.
 
         let mut col = if d < 0.0 {
             vec3(0.65, 0.85, 1.0)
         } else {
             vec3(0.9, 0.6, 0.3)
         };
+
         col *= 1.0 - (-6.0 * d.abs()).exp();
         col *= 0.8 + 0.2 * (150.0 * d).cos();
         col = col.lerp(Vec3::ONE, 1.0 - smoothstep(0.0, 0.01, d.abs()));

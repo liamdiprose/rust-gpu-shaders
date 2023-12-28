@@ -22,3 +22,4 @@ license = "MIT OR Apache-2.0"
 [workspace.dependencies]
 spirv-std = "0.9.0"
 spirv-builder = { version = "0.9.0", default-features = false }
+geometric_algebra = { path = "../geometric_algebra" }
