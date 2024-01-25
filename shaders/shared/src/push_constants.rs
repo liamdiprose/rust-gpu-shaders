@@ -1,3 +1,4 @@
+pub mod hydrogen_wavefunction;
 pub mod koch_snowflake;
 pub mod mandelbrot;
 pub mod ray_marching;
@@ -15,4 +16,5 @@ pub fn largest_size() -> usize {
         .max(size_of::<sierpinski_triangle::ShaderConstants>())
         .max(size_of::<sdfs_2d::ShaderConstants>())
         .max(size_of::<sdfs_3d::ShaderConstants>())
+        .max(size_of::<hydrogen_wavefunction::ShaderConstants>())
 }
