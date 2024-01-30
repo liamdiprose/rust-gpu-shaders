@@ -3,7 +3,7 @@
 use complex::Complex;
 use push_constants::hydrogen_wavefunction::ShaderConstants;
 use shared::*;
-use spirv_std::glam::{vec3, vec4, Vec2, Vec3, Vec4};
+use spirv_std::glam::{vec3, Vec2, Vec4};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;
@@ -16,27 +16,13 @@ fn factorialu(n: u32) -> f32 {
     ][n as usize] as f32
 }
 
-fn laguerre_polynomial(n: u32, alpha: f32, x: f32) -> f32 {
-    let l0 = 1.0;
-    let l1 = 1.0 + alpha - x;
-    match n {
-        0 => l0,
-        1 => l1,
-        _ => {
-            let mut v0 = l0;
-            let mut v = l1;
-            for i in 1..n {
-                let k = i as f32;
-                (v0, v) = (
-                    v,
-                    ((2.0 * k + 1.0 + alpha - x) * v - (k + alpha) * v0) / (k + 1.0),
-                );
-                // println!("{}", v);
-            }
-
-            v
-        }
+fn laguerre_polynomial(r: u32, s: u32, x: f32) -> f32 {
+    let mut sum = 0.0;
+    for q in 0..=s {
+        sum += (-1.0_f32).powi(q as i32) * factorialu(s + r) * factorialu(s + r) * x.powi(q as i32)
+            / (factorialu(s - q) * factorialu(r + q) * factorialu(q));
     }
+    sum
 }
 
 fn binomial(n: u32, k: u32) -> f32 {
@@ -57,7 +43,6 @@ fn general_binomial(n: f32, k: u32) -> f32 {
 
 fn legendre_polynomial(m: i32, mut l: i32, x: f32) -> Complex {
     fn legendre_polynomial_positive(m: u32, l: u32, x: f32) -> Complex {
-        // 1.0
         let mut sm = 0.0;
         for k in m..=l {
             sm += factorialu(k) / factorialu(k - m)
@@ -65,21 +50,8 @@ fn legendre_polynomial(m: i32, mut l: i32, x: f32) -> Complex {
                 * binomial(l, k)
                 * general_binomial(((l + k) as f32 - 1.0) / 2.0, l);
         }
-        // let sm = 1.0;
-        // let bb = if x == 1.0 {
-        //     // Complex::ONE
-        //     Complex::new(1.0 - x * x, 0.0).powf(m as f32 / 2.0)
-        // } else {
-        //     Complex::new(1.0 - x * x, 0.0).powf(m as f32 / 2.0)
-        // };
         let bb = Complex::new(1.0 - x * x, 0.0).powf(m as f32 / 2.0);
-        // println!("sm: {}", sm);
-        // println!("x: {}", x);
-        // println!("bb: {:?}", bb);
-        // println!("m: {}", m);
-        // println!("{}", m as f32 / 2.0);
         (-1.0_f32).powi(m as i32) * 2.0_f32.powi(l as i32) * bb * sm
-        // (-1.0_f32).powi(m as i32) * 2.0_f32.powi(l as i32) * (1.0 - x * x).powf(m as f32 / 2.0) * sm
     }
     if l < 0 {
         l = -l - 1;
@@ -98,34 +70,23 @@ fn spherical_harmonic(m: i32, l: i32, theta: f32, phi: f32) -> Complex {
     .sqrt();
     let angular = (Complex::I * phi * m as f32).exp();
     let lp = legendre_polynomial(m, l, theta.cos());
-    // println!("(m,l,theta,phi): ({}, {}, {}, {})", m, l, theta, phi);
-    // println!("nc:  {}", normalization_constant);
-    // println!("ang: {:?}", angular);
-    // println!("lp : {:?}", lp);
     normalization_constant * lp * angular
 }
 
-fn hydrogen_wavefunction(n: u32, l: u32, m: i32, theta: f32, phi: f32, r: f32) -> Complex {
+fn radial_wavefunction(n: u32, l: u32, r: f32) -> f32 {
     let p = (2.0 * r) / (n as f32 * A);
-    let normalization_constant = ((2.0 / (n as f32 * A)) * factorialu(n - l - 1)
-        / (2.0 * n as f32 * factorialu(n + l)).powi(3))
+    let normalization_constant = ((2.0 / (n as f32 * A)).powi(3) * factorialu(n - l - 1)
+        / (2.0 * n as f32 * factorialu(n + l).powi(3)))
     .sqrt();
     let asymptotic_forms = (-r / (n as f32 * A)).exp() * p.powi(l as i32);
-    let lp = laguerre_polynomial((n - l) as u32 - 1, 2.0 * l as f32 + 1.0, p);
-    let radial = asymptotic_forms * lp;
+    let lp = laguerre_polynomial(2 * l + 1, n - l - 1, p);
+    normalization_constant * asymptotic_forms * lp
+}
+
+fn hydrogen_wavefunction(n: u32, l: u32, m: i32, theta: f32, phi: f32, r: f32) -> Complex {
+    let radial = radial_wavefunction(n, l, r);
     let angular = spherical_harmonic(m, l as i32, theta, phi);
-    // println!("(n,l)     ({},{})", n,l);
-    // println!("p     {:?}", p);
-    // println!("r     {:?}", r);
-    // println!("p     {:?}", p);
-    // println!("nc     {:?}", normalization_constant);
-    // println!("1       {:?}", (-r * p / 2.0).exp());
-    // println!("2       {:?}", (r * p).powi(l as i32));
-    // println!("asmfrms {:?}", asymptotic_forms);
-    // println!("lp      {:?}", lp);
-    // println!("radial  {:?}", radial);
-    // println!("angular {:?}", angular);
-    normalization_constant * radial * angular
+    radial * angular
 }
 
 #[spirv(fragment)]
@@ -134,10 +95,7 @@ pub fn main_fs(
     #[spirv(push_constant)] constants: &ShaderConstants,
     output: &mut Vec4,
 ) {
-    let coord = Complex::new(
-        frag_coord.x,
-        frag_coord.y,
-    );
+    let coord = Complex::new(frag_coord.x, frag_coord.y);
 
     let uv = constants.zoom
         * A
@@ -149,7 +107,6 @@ pub fn main_fs(
     if phi < 0.0 {
         phi += 2.0 * PI;
     }
-    // let theta = constants.translate_x / constants.height as f32;
     let theta = constants.time * PI;
     let z = hydrogen_wavefunction(
         constants.n,
@@ -161,29 +118,11 @@ pub fn main_fs(
     );
 
     let red = z.dot(Vec2::X);
-    let green = z.dot(Vec2::from_angle(3.0*PI/4.0));
-    let blue = z.dot(Vec2::from_angle(-3.0*PI/4.0));
+    let green = z.dot(Vec2::from_angle(3.0 * PI / 4.0));
+    let blue = z.dot(Vec2::from_angle(-3.0 * PI / 4.0));
 
-    let col = vec3(
-        red,
-        green,
-        blue
-    );
     let c = z.norm_squared();
-    let col = vec3(c,c,c);
-    // let c = z.norm_squared().powf(1.0/6.0);
-    // let mut col = vec3(z.x.signum() * c, c, z.y.signum() * c);
-    // if z.norm_squared() > 1.0 {
-    //     col = vec3(1.0,0.0,0.0);
-    // }
-    // if z.norm_squared() > 2.0 {
-    //     col = vec3(0.0,0.0,1.0);
-    // }
-    // if c > 0.01 {
-        // col = vec3(z.x, c, z.y);
-    // } else {
-    //     col = vec3(0.0,0.0,0.0);
-    // }
+    let col = vec3(c * red.signum(), c * green.signum(), c * blue.signum());
 
     *output = col.extend(1.0);
 }
