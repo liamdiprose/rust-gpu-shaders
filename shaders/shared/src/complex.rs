@@ -64,6 +64,12 @@ impl From<Vec2> for Complex {
     }
 }
 
+impl From<f32> for Complex {
+    fn from(value: f32) -> Complex {
+        Complex::new(value, 0.0)
+    }
+}
+
 impl Deref for Complex {
     type Target = Vec2;
 
@@ -134,8 +140,9 @@ impl Div<Complex> for Complex {
     }
 }
 
-impl From<f32> for Complex {
-    fn from(value: f32) -> Complex {
-        Complex::new(value, 0.0)
+impl Neg for Complex {
+    type Output = Self;
+    fn neg(self) -> Self::Output {
+        Complex::new(-self.x, -self.y)
     }
 }

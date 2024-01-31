@@ -6,6 +6,7 @@ pub mod ray_marching_2d;
 pub mod sdfs_2d;
 pub mod sdfs_3d;
 pub mod sierpinski_triangle;
+pub mod spherical_harmonics;
 
 pub fn largest_size() -> usize {
     use core::mem::size_of;
@@ -17,4 +18,5 @@ pub fn largest_size() -> usize {
         .max(size_of::<sdfs_2d::ShaderConstants>())
         .max(size_of::<sdfs_3d::ShaderConstants>())
         .max(size_of::<hydrogen_wavefunction::ShaderConstants>())
+        .max(size_of::<spherical_harmonics::ShaderConstants>())
 }
