@@ -1,5 +1,5 @@
 use crate::saturate;
-use spirv_std::glam::{vec2, Vec2, Vec3, Vec3Swizzles};
+use spirv_std::glam::{vec2, vec3, Vec2, Vec3, Vec3Swizzles};
 use spirv_std::num_traits::Float;
 
 pub mod ops;
@@ -54,4 +54,13 @@ pub fn cuboid(p: Vec3, dim: Vec3) -> f32 {
     let e = v.max(Vec3::ZERO).length();
     let i = v.max_element().min(0.0);
     e + i
+}
+
+pub fn cuboid_frame(p: Vec3, dim: Vec3, dim2: Vec3) -> f32 {
+    let p = p.abs() - dim / 2.0;
+    let q = (p + dim2 / 2.0).abs() - dim2 / 2.0;
+        
+    (vec3(p.x, q.y, q.z).max(Vec3::ZERO).length() + vec3(p.x, q.y, q.z).max_element().min(0.0))
+        .min(vec3(q.x, p.y, q.z).max(Vec3::ZERO).length() + vec3(q.x, p.y, q.z).max_element().min(0.0))
+        .min(vec3(q.x, q.y, p.z).max(Vec3::ZERO).length() + vec3(q.x, q.y, p.z).max_element().min(0.0))
 }

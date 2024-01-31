@@ -286,6 +286,32 @@ impl crate::controller::Controller for Controller {
                     );
                 });
             }
+            if self.options.shape == Shape::CuboidFrame {
+                ui.horizontal(|ui| {
+                    ui.label("Inner Width");
+                    ui.add(
+                        egui::DragValue::new(&mut params.dim4)
+                            .clamp_range(0.0..=params.dim1 / 2.0)
+                            .speed(0.001),
+                    );
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Inner Height");
+                    ui.add(
+                        egui::DragValue::new(&mut params.dim5)
+                            .clamp_range(0.0..=params.dim2 / 2.0)
+                            .speed(0.001),
+                    );
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Inner Length");
+                    ui.add(
+                        egui::DragValue::new(&mut params.dim6)
+                            .clamp_range(0.0..=params.dim3 / 2.0)
+                            .speed(0.001),
+                    );
+                });
+            }
         }
     }
 }
