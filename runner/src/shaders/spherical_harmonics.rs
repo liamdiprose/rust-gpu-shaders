@@ -1,5 +1,5 @@
 use bytemuck::Zeroable;
-use egui::{vec2, Context, Vec2};
+use egui::{vec2, Color32, Context, Rect, RichText, Sense, Stroke, Ui, Vec2};
 use glam::Quat;
 use shared::push_constants::spherical_harmonics::ShaderConstants;
 use std::time::Instant;
@@ -33,7 +33,7 @@ impl crate::controller::Controller for Controller {
             cursor: Vec2::ZERO,
             drag_start: Vec2::ZERO,
             drag_end: Vec2::ZERO,
-            q: Quat::IDENTITY,
+            q: Quat::from_xyzw(-0.004286735, -0.18652226, -0.000813862, 0.98244107),
             zoom: 1.0,
             mouse_button_pressed: false,
             shader_constants: ShaderConstants::zeroed(),
@@ -127,22 +127,58 @@ impl crate::controller::Controller for Controller {
         true
     }
 
-    fn ui(&mut self, _ctx: &Context, ui: &mut egui::Ui) {
-        ui.horizontal(|ui| {
-            ui.label("l:");
-            ui.add(
-                egui::DragValue::new(&mut self.l)
-                    .clamp_range(0..=10)
-                    .speed(0.1),
-            );
-        });
-        ui.horizontal(|ui| {
-            ui.label("m:");
-            ui.add(
-                egui::DragValue::new(&mut self.m)
-                    .clamp_range(-(self.l as i32)..=self.l as i32)
-                    .speed(0.1),
-            );
-        });
+    fn ui(&mut self, _ctx: &Context, ui: &mut Ui) {
+        let (rect, response) = ui.allocate_at_least([220.0; 2].into(), Sense::click_and_drag());
+        let l_max = 9;
+        let circle_radius = rect.width() / (l_max + 1) as f32 / 2.0;
+        for l in 0..=l_max {
+            for m in 0..=l as i32 {
+                let circle_pos = rect.left_top()
+                    + vec2(m as f32, l as f32)
+                        * ((rect.width() - circle_radius * 2.0) / l_max as f32)
+                    + Vec2::splat(circle_radius);
+                ui.painter().circle(
+                    circle_pos,
+                    circle_radius,
+                    if l == self.l && m == self.m {
+                        Color32::DARK_GREEN
+                    } else {
+                        Color32::DARK_GRAY
+                    },
+                    Stroke::NONE,
+                );
+            }
+        }
+
+        if let Some(mouse_pos) = response.interact_pointer_pos() {
+            let v = ((mouse_pos - rect.left_top()) * (l_max + 1) as f32 / rect.width())
+                .clamp(Vec2::ZERO, Vec2::splat(l_max as f32));
+            if v.x > v.y {
+                let dif = v.x - v.y;
+                self.l = (v.y + (dif / 2.0)) as u32;
+                self.m = (v.x - (dif / 2.0)) as i32;
+            } else {
+                self.l = v.y as u32;
+                self.m = v.x as i32;
+            }
+        }
+
+        ui.put(
+            Rect::from_min_max(rect.min + vec2(rect.width() - 150.0, 4.0), rect.max),
+            |ui: &mut Ui| {
+                ui.horizontal_wrapped(|ui| {
+                    let text_size = 36.0;
+                    ui.spacing_mut().item_spacing *= 0.0;
+                    ui.heading(RichText::new("Y").size(text_size));
+                    ui.vertical(|ui| {
+                        ui.label(RichText::new(format!(" {}", self.m)).size(text_size / 2.0));
+                        ui.label(RichText::new(format!("{}", self.l)).size(text_size / 2.0));
+                    });
+                    ui.heading(RichText::new("(θ, φ)").size(text_size))
+                })
+                .inner
+            },
+        );
+        ui.advance_cursor_after_rect(rect);
     }
 }
