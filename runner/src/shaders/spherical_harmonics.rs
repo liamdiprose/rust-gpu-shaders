@@ -1,5 +1,5 @@
 use bytemuck::Zeroable;
-use egui::{vec2, Color32, Context, Rect, RichText, Sense, Stroke, Ui, Vec2};
+use egui::{vec2, Color32, Context, Event, Rect, RichText, Sense, Stroke, Ui, Vec2};
 use glam::Quat;
 use shared::push_constants::spherical_harmonics::ShaderConstants;
 use std::time::Instant;
@@ -23,6 +23,7 @@ pub struct Controller {
     shader_constants: ShaderConstants,
     l: u32,
     m: i32,
+    negative_m: bool,
 }
 
 impl crate::controller::Controller for Controller {
@@ -39,6 +40,7 @@ impl crate::controller::Controller for Controller {
             shader_constants: ShaderConstants::zeroed(),
             l: 2,
             m: 1,
+            negative_m: false,
         }
     }
 
@@ -127,8 +129,8 @@ impl crate::controller::Controller for Controller {
         true
     }
 
-    fn ui(&mut self, _ctx: &Context, ui: &mut Ui) {
-        let (rect, response) = ui.allocate_at_least([220.0; 2].into(), Sense::click_and_drag());
+    fn ui(&mut self, ctx: &Context, ui: &mut Ui) {
+        let (rect, response) = ui.allocate_at_least([220.0; 2].into(), Sense::drag());
         let l_max = 9;
         let circle_radius = rect.width() / (l_max + 1) as f32 / 2.0;
         for l in 0..=l_max {
@@ -142,6 +144,8 @@ impl crate::controller::Controller for Controller {
                     circle_radius,
                     if l == self.l && m == self.m {
                         Color32::DARK_GREEN
+                    } else if l == self.l && m == -self.m {
+                        Color32::from_rgb(0, 0x64, 0x64)
                     } else {
                         Color32::DARK_GRAY
                     },
@@ -160,6 +164,14 @@ impl crate::controller::Controller for Controller {
             } else {
                 self.l = v.y as u32;
                 self.m = v.x as i32;
+            }
+            ctx.input(|input| {
+                if input.pointer.any_pressed() {
+                    self.negative_m = input.pointer.secondary_pressed();
+                }
+            });
+            if self.negative_m {
+                self.m = -self.m;
             }
         }
 
