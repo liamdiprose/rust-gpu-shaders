@@ -43,6 +43,10 @@ impl crate::controller::Controller for Controller {
         bytemuck::bytes_of(&self.shader_constants)
     }
 
+    fn has_ui(&self) -> bool {
+        true
+    }
+
     fn ui(&mut self, _ctx: &Context, ui: &mut egui::Ui) {
         ui.radio_value(&mut self.use_antisnowflake, false, "Snowflake");
         ui.radio_value(&mut self.use_antisnowflake, true, "AntiSnowflake");

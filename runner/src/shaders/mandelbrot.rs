@@ -109,6 +109,10 @@ impl crate::controller::Controller for Controller {
         bytemuck::bytes_of(&self.shader_constants)
     }
 
+    fn has_ui(&self) -> bool {
+        true
+    }
+
     fn ui(&mut self, _ctx: &Context, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.label("Exponent:");
