@@ -132,27 +132,6 @@ impl crate::controller::Controller for Controller {
     fn ui(&mut self, ctx: &Context, ui: &mut Ui) {
         let (rect, response) = ui.allocate_at_least([220.0; 2].into(), Sense::drag());
         let l_max = 9;
-        let circle_radius = rect.width() / (l_max + 1) as f32 / 2.0;
-        for l in 0..=l_max {
-            for m in 0..=l as i32 {
-                let circle_pos = rect.left_top()
-                    + vec2(m as f32, l as f32)
-                        * ((rect.width() - circle_radius * 2.0) / l_max as f32)
-                    + Vec2::splat(circle_radius);
-                ui.painter().circle(
-                    circle_pos,
-                    circle_radius,
-                    if l == self.l && m == self.m {
-                        Color32::DARK_GREEN
-                    } else if l == self.l && m == -self.m {
-                        Color32::from_rgb(0, 0x64, 0x64)
-                    } else {
-                        Color32::DARK_GRAY
-                    },
-                    Stroke::NONE,
-                );
-            }
-        }
 
         if let Some(mouse_pos) = response.interact_pointer_pos() {
             let v = ((mouse_pos - rect.left_top()) * (l_max + 1) as f32 / rect.width())
@@ -172,6 +151,28 @@ impl crate::controller::Controller for Controller {
             });
             if self.negative_m {
                 self.m = -self.m;
+            }
+        }
+
+        let circle_radius = rect.width() / (l_max + 1) as f32 / 2.0;
+        for l in 0..=l_max {
+            for m in 0..=l as i32 {
+                let circle_pos = rect.left_top()
+                    + vec2(m as f32, l as f32)
+                        * ((rect.width() - circle_radius * 2.0) / l_max as f32)
+                    + Vec2::splat(circle_radius);
+                ui.painter().circle(
+                    circle_pos,
+                    circle_radius,
+                    if l == self.l && m == self.m {
+                        Color32::DARK_GREEN
+                    } else if l == self.l && m == -self.m {
+                        Color32::from_rgb(0, 0x64, 0x64)
+                    } else {
+                        Color32::DARK_GRAY
+                    },
+                    Stroke::NONE,
+                );
             }
         }
 
