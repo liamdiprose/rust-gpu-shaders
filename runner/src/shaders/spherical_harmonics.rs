@@ -1,6 +1,6 @@
 use bytemuck::Zeroable;
-use egui::{vec2, Color32, Context, Event, Rect, RichText, Sense, Stroke, Ui, Vec2};
-use glam::Quat;
+use egui::{Color32, Context, Rect, RichText, Sense, Stroke, Ui};
+use glam::{vec2, Quat, Vec2};
 use shared::push_constants::spherical_harmonics::ShaderConstants;
 use std::time::Instant;
 use winit::event::{ElementState, MouseScrollDelta};
@@ -17,7 +17,7 @@ pub struct Controller {
     cursor: Vec2,
     drag_start: Vec2,
     drag_end: Vec2,
-    q: Quat,
+    quat: Quat,
     zoom: f32,
     mouse_button_pressed: bool,
     shader_constants: ShaderConstants,
@@ -34,7 +34,7 @@ impl crate::controller::Controller for Controller {
             cursor: Vec2::ZERO,
             drag_start: Vec2::ZERO,
             drag_end: Vec2::ZERO,
-            q: Quat::from_xyzw(-0.004286735, -0.18652226, -0.000813862, 0.98244107),
+            quat: Quat::from_xyzw(-0.004286735, -0.18652226, -0.000813862, 0.98244107),
             zoom: 1.0,
             mouse_button_pressed: false,
             shader_constants: ShaderConstants::zeroed(),
@@ -50,8 +50,8 @@ impl crate::controller::Controller for Controller {
                 ElementState::Pressed => true,
                 ElementState::Released => {
                     let angles = PI * (self.drag_start - self.drag_end) / self.size.height as f32;
-                    self.q = self
-                        .q
+                    self.quat = self
+                        .quat
                         .mul_quat(Quat::from_rotation_y(-angles.x))
                         .mul_quat(Quat::from_rotation_x(angles.y))
                         .normalize();
@@ -94,30 +94,24 @@ impl crate::controller::Controller for Controller {
     }
 
     fn resize(&mut self, size: PhysicalSize<u32>) {
-        self.size.width = size.width;
-        self.size.height = size.height;
+        self.size = size;
     }
 
     fn update(&mut self) {
         let angles = PI * (self.drag_start - self.drag_end) / self.size.height as f32;
-        let q = self
-            .q
+        let quat = self
+            .quat
             .mul_quat(Quat::from_rotation_y(-angles.x))
             .mul_quat(Quat::from_rotation_x(angles.y));
         self.shader_constants = ShaderConstants {
-            width: self.size.width,
-            height: self.size.height,
+            size: self.size.into(),
             time: self.start.elapsed().as_secs_f32(),
-            cursor_x: self.cursor.x,
-            cursor_y: self.cursor.y,
+            cursor: self.cursor.into(),
             zoom: self.zoom,
             mouse_button_pressed: !(1 << self.mouse_button_pressed as u32),
             l: self.l,
             m: self.m,
-            x: q.x,
-            y: q.y,
-            z: q.z,
-            w: q.w,
+            quat: quat.into(),
         };
     }
 
@@ -135,7 +129,7 @@ impl crate::controller::Controller for Controller {
 
         if let Some(mouse_pos) = response.interact_pointer_pos() {
             let v = ((mouse_pos - rect.left_top()) * (l_max + 1) as f32 / rect.width())
-                .clamp(Vec2::ZERO, Vec2::splat(l_max as f32));
+                .clamp(egui::Vec2::ZERO, egui::Vec2::splat(l_max as f32));
             if v.x > v.y {
                 let dif = v.x - v.y;
                 self.l = (v.y + (dif / 2.0)) as u32;
@@ -158,9 +152,9 @@ impl crate::controller::Controller for Controller {
         for l in 0..=l_max {
             for m in 0..=l as i32 {
                 let circle_pos = rect.left_top()
-                    + vec2(m as f32, l as f32)
+                    + egui::vec2(m as f32, l as f32)
                         * ((rect.width() - circle_radius * 2.0) / l_max as f32)
-                    + Vec2::splat(circle_radius);
+                    + egui::Vec2::splat(circle_radius);
                 ui.painter().circle(
                     circle_pos,
                     circle_radius,
@@ -177,7 +171,7 @@ impl crate::controller::Controller for Controller {
         }
 
         ui.put(
-            Rect::from_min_max(rect.min + vec2(rect.width() - 150.0, 4.0), rect.max),
+            Rect::from_min_max(rect.min + egui::vec2(rect.width() - 150.0, 4.0), rect.max),
             |ui: &mut Ui| {
                 ui.horizontal_wrapped(|ui| {
                     let text_size = 36.0;

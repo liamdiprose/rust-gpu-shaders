@@ -110,10 +110,10 @@ pub fn main_fs(
     output: &mut Vec4,
 ) {
     let uv = (Complex::from(frag_coord.xy())
-        - 0.5 * Complex::new(constants.width as f32, constants.height as f32))
-        / constants.height as f32;
+        - 0.5 * Complex::new(constants.size.width as f32, constants.size.height as f32))
+        / constants.size.height as f32;
 
-    let rq = Quat::from_xyzw(constants.x, constants.y, constants.z, constants.w);
+    let rq: Quat = constants.quat.into();
     let ro = rq.mul_vec3(Vec2::ZERO.extend(-constants.zoom));
     let rd = rq.mul_vec3(uv.extend(1.0).normalize());
 
