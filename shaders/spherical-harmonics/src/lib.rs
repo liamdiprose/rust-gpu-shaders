@@ -120,7 +120,9 @@ pub fn main_fs(
     let d = ray_march_sphere(ro, rd);
     let col = if d < MAX_DIST {
         let (_, theta, phi) = to_spherical(ro + rd * d);
-        let z = spherical_harmonic(constants.m, constants.l, theta, phi);
+        let x = constants.time;
+        let z = spherical_harmonic(constants.m, constants.l, theta, phi)
+            * (x.cos() + Complex::I * x.sin());
         vec3(
             z.dot(Vec2::X),
             z.dot(vec2(-FRAC_1_SQRT_2, FRAC_1_SQRT_2)),

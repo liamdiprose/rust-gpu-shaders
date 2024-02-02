@@ -24,6 +24,7 @@ pub struct Controller {
     l: u32,
     m: i32,
     negative_m: bool,
+    include_time_factor: bool,
 }
 
 impl crate::controller::Controller for Controller {
@@ -41,6 +42,7 @@ impl crate::controller::Controller for Controller {
             l: 2,
             m: 1,
             negative_m: false,
+            include_time_factor: false,
         }
     }
 
@@ -105,7 +107,11 @@ impl crate::controller::Controller for Controller {
             .mul_quat(Quat::from_rotation_x(angles.y));
         self.shader_constants = ShaderConstants {
             size: self.size.into(),
-            time: self.start.elapsed().as_secs_f32(),
+            time: if self.include_time_factor {
+                self.start.elapsed().as_secs_f32()
+            } else {
+                0.0
+            },
             cursor: self.cursor.into(),
             zoom: self.zoom,
             mouse_button_pressed: !(1 << self.mouse_button_pressed as u32),
@@ -124,6 +130,14 @@ impl crate::controller::Controller for Controller {
     }
 
     fn ui(&mut self, ctx: &Context, ui: &mut Ui) {
+        if ui
+            .checkbox(&mut self.include_time_factor, "Include time factor")
+            .clicked()
+            && self.include_time_factor
+        {
+            self.start = Instant::now();
+        }
+
         let (rect, response) = ui.allocate_at_least([220.0; 2].into(), Sense::drag());
         let l_max = 9;
 
