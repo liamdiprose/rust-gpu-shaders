@@ -132,6 +132,10 @@ impl crate::controller::Controller for Controller {
         bytemuck::bytes_of(&self.shader_constants)
     }
 
+    fn has_ui(&self) -> bool {
+        true
+    }
+
     fn ui(&mut self, ctx: &Context, ui: &mut egui::Ui) {
         ctx.set_cursor_icon(if self.options.is_dragging {
             CursorIcon::Grabbing

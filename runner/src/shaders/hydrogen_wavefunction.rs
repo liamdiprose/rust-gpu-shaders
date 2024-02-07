@@ -1,6 +1,6 @@
 use bytemuck::Zeroable;
 use egui::{vec2, Context, Vec2};
-use shared::push_constants::mandelbrot::ShaderConstants;
+use shared::push_constants::hydrogen_wavefunction::ShaderConstants;
 use std::time::Instant;
 use winit::event::{ElementState, MouseScrollDelta};
 use winit::{
@@ -17,9 +17,10 @@ pub struct Controller {
     camera: Vec2,
     zoom: f32,
     mouse_button_pressed: bool,
-    exponent: f32,
-    num_iterations: u32,
     shader_constants: ShaderConstants,
+    n: i32,
+    l: i32,
+    m: i32,
 }
 
 impl crate::controller::Controller for Controller {
@@ -33,9 +34,10 @@ impl crate::controller::Controller for Controller {
             camera: Vec2::ZERO,
             zoom: 1.0,
             mouse_button_pressed: false,
-            exponent: 2.0,
-            num_iterations: 35,
             shader_constants: ShaderConstants::zeroed(),
+            n: 1,
+            l: 0,
+            m: 0,
         }
     }
 
@@ -81,7 +83,7 @@ impl crate::controller::Controller for Controller {
             }
         };
         self.zoom *= scroll;
-        self.camera *= 1.0 / scroll;
+        // self.camera *= 1.0 / scroll;
     }
 
     fn resize(&mut self, size: PhysicalSize<u32>) {
@@ -100,8 +102,9 @@ impl crate::controller::Controller for Controller {
             translate_x: self.camera.x + self.drag_start.x - self.drag_end.x,
             translate_y: self.camera.y + self.drag_start.y - self.drag_end.y,
             mouse_button_pressed: !(1 << self.mouse_button_pressed as u32),
-            exponent: self.exponent,
-            num_iterations: self.num_iterations,
+            n: self.n as u32,
+            l: self.l as u32,
+            m: self.m,
         };
     }
 
@@ -115,19 +118,27 @@ impl crate::controller::Controller for Controller {
 
     fn ui(&mut self, _ctx: &Context, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
-            ui.label("Exponent:");
+            ui.label("n:");
             ui.add(
-                egui::DragValue::new(&mut self.exponent)
-                    .clamp_range(1.0..=6.0)
+                egui::DragValue::new(&mut self.n)
+                    .clamp_range(1..=5)
                     .speed(0.1),
             );
         });
         ui.horizontal(|ui| {
-            ui.label("Num Iterations:");
+            ui.label("l:");
             ui.add(
-                egui::DragValue::new(&mut self.num_iterations)
-                    .clamp_range(2..=200)
-                    .speed(1),
+                egui::DragValue::new(&mut self.l)
+                    .clamp_range(0..=self.n - 1)
+                    .speed(0.1),
+            );
+        });
+        ui.horizontal(|ui| {
+            ui.label("m:");
+            ui.add(
+                egui::DragValue::new(&mut self.m)
+                    .clamp_range(-self.l..=self.l)
+                    .speed(0.1),
             );
         });
     }

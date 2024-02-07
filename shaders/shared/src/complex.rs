@@ -12,6 +12,8 @@ impl Complex {
         Complex::from(Vec2::new(x, y))
     }
     pub const ZERO: Complex = Complex(Vec2::ZERO);
+    pub const ONE: Complex = Complex(Vec2::X);
+    pub const I: Complex = Complex(Vec2::Y);
 }
 
 impl Complex {
@@ -43,11 +45,28 @@ impl Complex {
     pub fn from_polar(r: f32, theta: f32) -> Self {
         Self::new(r * theta.cos(), r * theta.sin())
     }
+
+    pub fn sqrt(self) -> Self {
+        Self::new(
+            ((self.norm() + self.x) / 2.0).sqrt(),
+            self.y.signum() * ((self.norm() - self.x) / 2.0).sqrt(),
+        )
+    }
+
+    pub fn exp(self) -> Self {
+        Self::from_polar(self.x.exp(), self.y)
+    }
 }
 
 impl From<Vec2> for Complex {
     fn from(value: Vec2) -> Self {
         Complex(value)
+    }
+}
+
+impl From<f32> for Complex {
+    fn from(value: f32) -> Complex {
+        Complex::new(value, 0.0)
     }
 }
 
@@ -107,5 +126,23 @@ impl Div<f32> for Complex {
     type Output = Self;
     fn div(self, other: f32) -> Self::Output {
         Complex::new(self.x / other, self.y / other)
+    }
+}
+
+impl Div<Complex> for Complex {
+    type Output = Self;
+    fn div(self, other: Complex) -> Self::Output {
+        let d = other.x * other.x + other.y * other.y;
+        Complex::new(
+            (self.x * other.x + self.y * other.y) / d,
+            (self.y * other.x - self.x * other.y) / d,
+        )
+    }
+}
+
+impl Neg for Complex {
+    type Output = Self;
+    fn neg(self) -> Self::Output {
+        Complex::new(-self.x, -self.y)
     }
 }

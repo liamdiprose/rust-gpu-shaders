@@ -10,6 +10,8 @@ members = [
   "shaders/sierpinski-triangle",
   "shaders/sdfs-2d",
   "shaders/sdfs-3d",
+  "shaders/hydrogen-wavefunction",
+  "shaders/spherical-harmonics",
 ]
 default-members = ["runner"]
 
@@ -30,3 +32,6 @@ rev = "d0e374968a37d8a37c4f3509cd10719d384470f6"
 git = "https://github.com/EmbarkStudios/rust-gpu"
 rev = "d0e374968a37d8a37c4f3509cd10719d384470f6"
 default-features = false
+
+[profile.dev]
+package.spirv-tools-sys.opt-level = 1

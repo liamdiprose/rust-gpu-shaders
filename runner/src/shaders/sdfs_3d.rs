@@ -231,6 +231,10 @@ impl crate::controller::Controller for Controller {
         bytemuck::bytes_of(&self.shader_constants)
     }
 
+    fn has_ui(&self) -> bool {
+        true
+    }
+
     fn ui(&mut self, ctx: &Context, ui: &mut egui::Ui) {
         ctx.set_cursor_icon(if self.options.is_dragging {
             CursorIcon::Grabbing
@@ -283,6 +287,32 @@ impl crate::controller::Controller for Controller {
                         egui::DragValue::new(&mut params.dim3)
                             .clamp_range(0.0..=1.0)
                             .speed(0.01),
+                    );
+                });
+            }
+            if self.options.shape == Shape::CuboidFrame {
+                ui.horizontal(|ui| {
+                    ui.label("Inner Width");
+                    ui.add(
+                        egui::DragValue::new(&mut params.dim4)
+                            .clamp_range(0.0..=params.dim1 / 2.0)
+                            .speed(0.001),
+                    );
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Inner Height");
+                    ui.add(
+                        egui::DragValue::new(&mut params.dim5)
+                            .clamp_range(0.0..=params.dim2 / 2.0)
+                            .speed(0.001),
+                    );
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Inner Length");
+                    ui.add(
+                        egui::DragValue::new(&mut params.dim6)
+                            .clamp_range(0.0..=params.dim3 / 2.0)
+                            .speed(0.001),
                     );
                 });
             }

@@ -8,6 +8,7 @@ use spirv_std::glam::{vec2, vec3, Vec3};
 pub enum Shape {
     Sphere,
     Cuboid,
+    CuboidFrame,
     Capsule,
     Torus,
 }
@@ -34,6 +35,11 @@ impl Shape {
                 num_points: 0,
                 is_radial: false,
             },
+            CuboidFrame => ShapeSpec {
+                num_dims: 3,
+                num_points: 0,
+                is_radial: false,
+            },
             Capsule => ShapeSpec {
                 num_dims: 1,
                 num_points: 2,
@@ -53,6 +59,9 @@ impl Shape {
             dim1: if is_radial { 0.2 } else { 0.5 },
             dim2: if is_radial { 0.1 } else { 0.2 },
             dim3: 0.4,
+            dim4: 0.01,
+            dim5: 0.01,
+            dim6: 0.01,
             x0: 0.0,
             y0: 0.0,
             z0: 0.0,
@@ -72,6 +81,9 @@ pub fn sdf_shape(p: Vec3, shape: Shape, params: Params) -> f32 {
         dim1,
         dim2,
         dim3,
+        dim4,
+        dim5,
+        dim6,
         x0,
         y0,
         z0,
@@ -90,7 +102,8 @@ pub fn sdf_shape(p: Vec3, shape: Shape, params: Params) -> f32 {
     match shape {
         Sphere => sdf::sphere(p, radius),
         Cuboid => sdf::cuboid(p, vec3(width, height, length)),
-        Capsule => sdf::capsule(p, p0 , p1, radius),
+        CuboidFrame => sdf::cuboid_frame(p, vec3(width, height, length), vec3(dim4, dim5, dim6)),
+        Capsule => sdf::capsule(p, p0, p1, radius),
         Torus => sdf::torus(p, vec2(radius, radius2)),
     }
 }
@@ -107,6 +120,9 @@ pub struct Params {
     pub dim1: f32,
     pub dim2: f32,
     pub dim3: f32,
+    pub dim4: f32,
+    pub dim5: f32,
+    pub dim6: f32,
     pub x0: f32,
     pub y0: f32,
     pub z0: f32,
