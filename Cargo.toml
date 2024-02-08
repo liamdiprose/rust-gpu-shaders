@@ -12,6 +12,7 @@ members = [
   "shaders/sdfs-3d",
   "shaders/hydrogen-wavefunction",
   "shaders/spherical-harmonics",
+  "shaders/gaussian",
 ]
 default-members = ["runner"]
 
