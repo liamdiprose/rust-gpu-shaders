@@ -3,15 +3,13 @@
 use complex::Complex;
 use core::f32::consts::FRAC_1_SQRT_2;
 use push_constants::spherical_harmonics::ShaderConstants;
-use shared::{sdf_3d as sdf, *};
-use spirv_std::glam::{vec2, vec3, Quat, Vec2, Vec3, Vec3Swizzles, Vec4, Vec4Swizzles};
+use shared::*;
+use spirv_std::glam::{
+    vec2, vec3, Quat, Vec2, Vec2Swizzles, Vec3, Vec3Swizzles, Vec4, Vec4Swizzles,
+};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;
-
-const MAX_STEPS: u32 = 100;
-const MAX_DIST: f32 = 10.0;
-const SURF_DIST: f32 = 0.001;
 
 fn to_spherical(pos: Vec3) -> (f32, f32, f32) {
     let r = pos.length();
@@ -73,34 +71,27 @@ fn spherical_harmonic(m: i32, l: u32, theta: f32, phi: f32) -> Complex {
     normalization_constant * lp * angular
 }
 
-fn ray_march_sphere(ro: Vec3, rd: Vec3) -> f32 {
-    let mut d0 = 0.0;
-
-    for _ in 0..MAX_STEPS {
-        let p = ro + rd * d0;
-        let ds = sdf::sphere(p, 0.3);
-        d0 += ds;
-        if ds < SURF_DIST || d0 > MAX_DIST {
-            break;
-        }
-    }
-
-    d0
+fn ray_intersect_box_frame(ro: Vec3, rd: Vec3, dim: Vec2) -> bool {
+    let e = vec2(dim.x, -dim.x);
+    let o = vec3(dim.y, -dim.y, 0.0);
+    ray_intersect_aabb(ro, rd, e.yyy(), e.yxy() + o.xzx())
+        || ray_intersect_aabb(ro, rd, e.yyy(), e.xyy() + o.zxx())
+        || ray_intersect_aabb(ro, rd, e.xxy(), e.yxy() + o.zyx())
+        || ray_intersect_aabb(ro, rd, e.xxy(), e.xyy() + o.yzx())
+        || ray_intersect_aabb(ro, rd, e.yyx(), e.yxx() + o.xzy())
+        || ray_intersect_aabb(ro, rd, e.yyx(), e.xyx() + o.zxy())
+        || ray_intersect_aabb(ro, rd, e.xxx(), e.yxx() + o.zyy())
+        || ray_intersect_aabb(ro, rd, e.xxx(), e.xyx() + o.yzy())
+        || ray_intersect_aabb(ro, rd, e.yyy(), e.yyx() + o.xxz())
+        || ray_intersect_aabb(ro, rd, e.yxy(), e.yxx() + o.xyz())
+        || ray_intersect_aabb(ro, rd, e.xyy(), e.xyx() + o.yxz())
+        || ray_intersect_aabb(ro, rd, e.xxy(), e.xxx() + o.yyz())
 }
 
-fn ray_march_cage(ro: Vec3, rd: Vec3) -> f32 {
-    let mut d0 = 0.0;
-
-    for _ in 0..MAX_STEPS {
-        let p = ro + rd * d0;
-        let ds = sdf::cuboid_frame(p, Vec3::splat(0.6), Vec3::splat(0.001));
-        d0 += ds;
-        if ds < SURF_DIST || d0 > MAX_DIST {
-            break;
-        }
-    }
-
-    d0
+fn ray_intersect_aabb(ro: Vec3, rd: Vec3, a: Vec3, b: Vec3) -> bool {
+    let t1 = (a - ro) / rd;
+    let t2 = (b - ro) / rd;
+    t1.max(t2).min_element() > t1.min(t2).max_element()
 }
 
 #[spirv(fragment)]
@@ -114,23 +105,28 @@ pub fn main_fs(
         / constants.size.height as f32;
 
     let rq: Quat = constants.quat.into();
-    let ro = rq.mul_vec3(Vec2::ZERO.extend(-constants.zoom));
-    let rd = rq.mul_vec3(uv.extend(1.0).normalize());
-
-    let d = ray_march_sphere(ro, rd);
-    let col = if d < MAX_DIST {
-        let (_, theta, phi) = to_spherical(ro + rd * d);
-        let x = constants.time;
+    let r = 0.3 / constants.zoom;
+    let col = if uv.length_squared() <= r * r {
+        let pos = {
+            let x = uv.x;
+            let y = uv.y;
+            let z = (r * r - x * x - y * y).sqrt();
+            rq.mul_vec3(uv.extend(-z))
+        };
+        let (_, theta, phi) = to_spherical(pos);
         let z = spherical_harmonic(constants.m, constants.l, theta, phi)
-            * (x.cos() + Complex::I * x.sin());
+            * Complex::from_angle(constants.time);
+
         vec3(
             z.dot(Vec2::X),
             z.dot(vec2(-FRAC_1_SQRT_2, FRAC_1_SQRT_2)),
             z.dot(Vec2::splat(-FRAC_1_SQRT_2)),
         )
     } else {
-        if ray_march_cage(ro, rd) < MAX_DIST {
-            vec3(0.1, 0.1, 0.05)
+        let ro = rq.mul_vec3(uv.extend(-constants.zoom));
+        let rd = rq.mul_vec3(Vec2::ZERO.extend(1.0));
+        if ray_intersect_box_frame(ro, rd, vec2(r, 0.002 / constants.zoom)) {
+            vec3(0.1, 0.1, 0.08)
         } else {
             Vec3::ZERO
         }
