@@ -8,8 +8,8 @@ use spirv_std::num_traits::Float;
 pub struct Complex(Vec2);
 
 impl Complex {
-    pub fn new(x: f32, y: f32) -> Self {
-        Complex::from(Vec2::new(x, y))
+    pub const fn new(x: f32, y: f32) -> Self {
+        Complex(Vec2::new(x, y))
     }
     pub const ZERO: Complex = Complex(Vec2::ZERO);
     pub const ONE: Complex = Complex(Vec2::X);
@@ -43,7 +43,7 @@ impl Complex {
     }
 
     pub fn from_polar(r: f32, theta: f32) -> Self {
-        Self::new(r * theta.cos(), r * theta.sin())
+        r * Complex::from_angle(theta)
     }
 
     pub fn sqrt(self) -> Self {
@@ -55,6 +55,10 @@ impl Complex {
 
     pub fn exp(self) -> Self {
         Self::from_polar(self.x.exp(), self.y)
+    }
+
+    pub fn from_angle(angle: f32) -> Self {
+        Complex(Vec2::from_angle(angle))
     }
 }
 
@@ -88,6 +92,20 @@ impl Add for Complex {
     type Output = Self;
     fn add(self, other: Self) -> Self::Output {
         Complex::new(self.x + other.x, self.y + other.y)
+    }
+}
+
+impl Add<f32> for Complex {
+    type Output = Self;
+    fn add(self, x: f32) -> Self::Output {
+        Complex::new(self.x + x, self.y)
+    }
+}
+
+impl Add<Complex> for f32 {
+    type Output = Complex;
+    fn add(self, z: Complex) -> Self::Output {
+        Complex::new(self + z.x, z.y)
     }
 }
 
