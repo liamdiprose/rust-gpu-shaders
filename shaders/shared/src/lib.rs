@@ -3,6 +3,7 @@
 
 pub mod complex;
 pub mod push_constants;
+pub mod random;
 pub mod sdf_2d;
 pub mod sdf_3d;
 pub mod spherical_harmonics;
