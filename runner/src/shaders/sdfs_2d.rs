@@ -2,12 +2,18 @@ use bytemuck::Zeroable;
 use egui::{Context, CursorIcon};
 use glam::{vec2, Vec2};
 use shared::push_constants::sdfs_2d::{Params, ShaderConstants, Shape};
-use shared::PI;
-use std::time::{Duration, Instant};
+use std::{
+    f32::consts::PI,
+    time::{Duration, Instant},
+};
 use strum::IntoEnumIterator;
-use winit::dpi::PhysicalSize;
-use winit::event::{ElementState, MouseScrollDelta};
-use winit::{dpi::PhysicalPosition, event::MouseButton};
+use winit::{
+    dpi::{PhysicalPosition, PhysicalSize},
+    event::{ElementState, MouseButton, MouseScrollDelta},
+    event_loop::EventLoopProxy,
+};
+
+use crate::window::UserEvent;
 
 #[derive(Clone)]
 pub struct Options {
@@ -136,7 +142,7 @@ impl crate::controller::Controller for Controller {
         true
     }
 
-    fn ui(&mut self, ctx: &Context, ui: &mut egui::Ui) {
+    fn ui(&mut self, ctx: &Context, ui: &mut egui::Ui, _: &EventLoopProxy<UserEvent>) {
         ctx.set_cursor_icon(if self.options.is_dragging {
             CursorIcon::Grabbing
         } else if self.options.can_drag {
@@ -188,11 +194,7 @@ impl crate::controller::Controller for Controller {
 impl Controller {
     fn from_pixels(&self, p: Vec2) -> Vec2 {
         let p = vec2(p.x, -p.y);
-        (p - 0.5
-            * vec2(
-                self.size.width as f32,
-                -(self.size.height as f32),
-            ))
+        (p - 0.5 * vec2(self.size.width as f32, -(self.size.height as f32)))
             / self.size.height as f32
     }
 }

@@ -1,14 +1,21 @@
+use crate::window::UserEvent;
 use bytemuck::Zeroable;
 use egui::{Context, CursorIcon};
 use glam::{vec2, vec3, Mat3, Vec2, Vec3, Vec3Swizzles};
-use shared::push_constants::sdfs_3d::{sdf_shape, Params, ShaderConstants, Shape};
-use shared::sdf_3d as sdf;
-use shared::PI;
-use std::time::{Duration, Instant};
+use shared::{
+    push_constants::sdfs_3d::{sdf_shape, Params, ShaderConstants, Shape},
+    sdf_3d as sdf,
+};
+use std::{
+    f32::consts::PI,
+    time::{Duration, Instant},
+};
 use strum::IntoEnumIterator;
-use winit::dpi::PhysicalSize;
-use winit::event::{ElementState, MouseScrollDelta};
-use winit::{dpi::PhysicalPosition, event::MouseButton};
+use winit::{
+    dpi::{PhysicalPosition, PhysicalSize},
+    event::{ElementState, MouseButton, MouseScrollDelta},
+    event_loop::EventLoopProxy,
+};
 
 #[derive(Clone)]
 pub struct Options {
@@ -235,7 +242,7 @@ impl crate::controller::Controller for Controller {
         true
     }
 
-    fn ui(&mut self, ctx: &Context, ui: &mut egui::Ui) {
+    fn ui(&mut self, ctx: &Context, ui: &mut egui::Ui, _: &EventLoopProxy<UserEvent>) {
         ctx.set_cursor_icon(if self.options.is_dragging {
             CursorIcon::Grabbing
         } else if self.options.can_drag {

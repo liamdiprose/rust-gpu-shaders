@@ -1,15 +1,14 @@
+use crate::window::UserEvent;
 use bytemuck::Zeroable;
 use egui::{Color32, Context, Rect, RichText, Sense, Stroke, Ui};
 use glam::{vec2, Quat, Vec2};
 use shared::push_constants::spherical_harmonics::{ShaderConstants, Variant};
-use std::time::Instant;
-use winit::event::{ElementState, MouseScrollDelta};
+use std::{f32::consts::PI, time::Instant};
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
-    event::MouseButton,
+    event::{ElementState, MouseButton, MouseScrollDelta},
+    event_loop::EventLoopProxy,
 };
-
-use core::f32::consts::PI;
 
 pub struct Controller {
     size: PhysicalSize<u32>,
@@ -132,7 +131,7 @@ impl crate::controller::Controller for Controller {
         true
     }
 
-    fn ui(&mut self, ctx: &Context, ui: &mut Ui) {
+    fn ui(&mut self, ctx: &Context, ui: &mut Ui, _: &EventLoopProxy<UserEvent>) {
         ui.radio_value(&mut self.variant, Variant::Real, "Real");
         ui.radio_value(&mut self.variant, Variant::Complex, "Complex");
         if ui
