@@ -1,8 +1,8 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
 use complex::Complex;
-use core::f32::consts::FRAC_1_SQRT_2;
-use push_constants::spherical_harmonics::ShaderConstants;
+use core::f32::consts::{FRAC_1_SQRT_2, PI};
+use push_constants::spherical_harmonics::{ShaderConstants, Variant};
 use shared::*;
 use spirv_std::glam::{
     vec2, vec3, Quat, Vec2, Vec2Swizzles, Vec3, Vec3Swizzles, Vec4, Vec4Swizzles,
@@ -52,23 +52,34 @@ fn legendre_polynomial(m: i32, l: u32, x: f32) -> Complex {
                 * general_binomial(((l + k) as f32 - 1.0) / 2.0, l);
         }
         let bb = Complex::new(1.0 - x * x, 0.0).powf(m as f32 / 2.0);
-        (-1.0_f32).powi(m as i32) * 2.0_f32.powi(l as i32) * bb * sm
+        (-1.0).powi(m as i32) * 2.0.powi(l as i32) * bb * sm
     }
     if m < 0 {
-        (-1.0_f32).powi(-m) * factorialu(l + m as u32) / factorialu(l - m as u32)
+        (-1.0).powi(-m) * factorialu(l + m as u32) / factorialu(l - m as u32)
             * legendre_polynomial_positive((-m) as u32, l, x)
     } else {
         legendre_polynomial_positive(m as u32, l, x)
     }
 }
 
-fn spherical_harmonic(m: i32, l: u32, theta: f32, phi: f32) -> Complex {
+fn spherical_harmonic(m: i32, l: u32, theta: f32, phi: f32, time: f32) -> Complex {
     let normalization_constant = (((2 * l + 1) as f32 * factorialu(l - m as u32))
         / (4.0 * PI * factorialu(l + m as u32)))
     .sqrt();
-    let angular = (Complex::I * phi * m as f32).exp();
+    let angular = Complex::from_angle(phi * m as f32);
     let lp = legendre_polynomial(m, l, theta.cos());
-    normalization_constant * lp * angular
+    normalization_constant * lp * angular * Complex::from_angle(time)
+}
+
+fn real_spherical_harmonic(m: i32, l: u32, theta: f32, phi: f32, time: f32) -> f32 {
+    let sh = spherical_harmonic(m.abs(), l, theta, phi, time);
+    if m == 0 {
+        sh.x
+    } else if m > 0 {
+        2.0.sqrt() * sh.x
+    } else {
+        2.0.sqrt() * sh.y
+    }
 }
 
 fn ray_intersect_box_frame(ro: Vec3, rd: Vec3, dim: Vec2) -> bool {
@@ -103,28 +114,36 @@ pub fn main_fs(
     let uv = (Complex::from(frag_coord.xy())
         - 0.5 * Complex::new(constants.size.width as f32, constants.size.height as f32))
         / constants.size.height as f32;
-
-    let rq: Quat = constants.quat.into();
+    let rot: Quat = constants.quat.into();
     let r = 0.3 / constants.zoom;
+
     let col = if uv.length_squared() <= r * r {
         let pos = {
             let x = uv.x;
             let y = uv.y;
-            let z = (r * r - x * x - y * y).sqrt();
-            rq.mul_vec3(uv.extend(-z))
+            let z = -(r * r - x * x - y * y).sqrt();
+            rot * uv.extend(z)
         };
         let (_, theta, phi) = to_spherical(pos);
-        let z = spherical_harmonic(constants.m, constants.l, theta, phi)
-            * Complex::from_angle(constants.time);
-
-        vec3(
-            z.dot(Vec2::X),
-            z.dot(vec2(-FRAC_1_SQRT_2, FRAC_1_SQRT_2)),
-            z.dot(Vec2::splat(-FRAC_1_SQRT_2)),
-        )
+        let m = constants.m;
+        let l = constants.l;
+        match Variant::from_u32(constants.variant) {
+            Variant::Real => {
+                let x = real_spherical_harmonic(m, l, theta, phi, constants.time);
+                vec3(x, 0.0, -x)
+            }
+            Variant::Complex => {
+                let z = spherical_harmonic(m, l, theta, phi, constants.time);
+                vec3(
+                    z.dot(Vec2::X),
+                    z.dot(vec2(-FRAC_1_SQRT_2, FRAC_1_SQRT_2)),
+                    z.dot(Vec2::splat(-FRAC_1_SQRT_2)),
+                )
+            }
+        }
     } else {
-        let ro = rq.mul_vec3(uv.extend(-constants.zoom));
-        let rd = rq.mul_vec3(Vec2::ZERO.extend(1.0));
+        let ro = rot * uv.extend(-constants.zoom);
+        let rd = rot * Vec2::ZERO.extend(1.0);
         if ray_intersect_box_frame(ro, rd, vec2(r, 0.002 / constants.zoom)) {
             vec3(0.1, 0.1, 0.08)
         } else {

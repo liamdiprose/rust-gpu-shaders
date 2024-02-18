@@ -1,7 +1,7 @@
 use bytemuck::Zeroable;
 use egui::{Color32, Context, Rect, RichText, Sense, Stroke, Ui};
 use glam::{vec2, Quat, Vec2};
-use shared::push_constants::spherical_harmonics::ShaderConstants;
+use shared::push_constants::spherical_harmonics::{ShaderConstants, Variant};
 use std::time::Instant;
 use winit::event::{ElementState, MouseScrollDelta};
 use winit::{
@@ -25,6 +25,7 @@ pub struct Controller {
     m: i32,
     negative_m: bool,
     include_time_factor: bool,
+    variant: Variant,
 }
 
 impl crate::controller::Controller for Controller {
@@ -35,7 +36,7 @@ impl crate::controller::Controller for Controller {
             cursor: Vec2::ZERO,
             drag_start: Vec2::ZERO,
             drag_end: Vec2::ZERO,
-            quat: Quat::from_xyzw(-0.004286735, -0.18652226, -0.000813862, 0.98244107),
+            quat: Quat::IDENTITY,
             zoom: 1.0,
             mouse_button_pressed: false,
             shader_constants: ShaderConstants::zeroed(),
@@ -43,6 +44,7 @@ impl crate::controller::Controller for Controller {
             m: 1,
             negative_m: false,
             include_time_factor: false,
+            variant: Variant::Real,
         }
     }
 
@@ -118,6 +120,7 @@ impl crate::controller::Controller for Controller {
             l: self.l,
             m: self.m,
             quat: quat.into(),
+            variant: self.variant as u32,
         };
     }
 
@@ -130,6 +133,8 @@ impl crate::controller::Controller for Controller {
     }
 
     fn ui(&mut self, ctx: &Context, ui: &mut Ui) {
+        ui.radio_value(&mut self.variant, Variant::Real, "Real");
+        ui.radio_value(&mut self.variant, Variant::Complex, "Complex");
         if ui
             .checkbox(&mut self.include_time_factor, "Include time factor")
             .clicked()
