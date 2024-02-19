@@ -22,8 +22,12 @@ impl Complex {
     }
 
     pub fn powf(self, exp: f32) -> Self {
-        let (r, theta) = self.to_polar();
-        Self::from_polar(r.powf(exp), theta * exp)
+        if exp == 0.0 {
+            Complex::ONE
+        } else {
+            let (r, theta) = self.to_polar();
+            Self::from_polar(r.powf(exp), theta * exp)
+        }
     }
 
     pub fn norm(self) -> f32 {

@@ -1,10 +1,10 @@
 use crate::complex::Complex;
 use core::f32::consts::PI;
-use spirv_std::glam::{vec3, Vec3, Vec3Swizzles};
+use spirv_std::glam::{vec3, Vec2, Vec3, Vec3Swizzles};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 
-fn factorialu(n: u32) -> f32 {
+pub fn factorialu(n: u32) -> f32 {
     let mut x = 1.0;
     for i in 2..=n {
         x *= i as f32;
@@ -55,9 +55,16 @@ pub fn from_spherical(r: f32, theta: f32, phi: f32) -> Vec3 {
 }
 
 pub fn to_spherical(pos: Vec3) -> (f32, f32, f32) {
+    if pos == Vec3::ZERO {
+        return (0.0, 0.0, 0.0);
+    }
     let r = pos.length();
     let theta = (pos.z / r).acos();
-    let phi = pos.y.signum() * (pos.x / pos.xy().length()).acos();
+    let phi = if pos.xy() == Vec2::ZERO {
+        0.0
+    } else {
+        pos.y.signum() * (pos.x / pos.xy().length()).acos()
+    };
     (r, theta, phi)
 }
 
