@@ -12,5 +12,5 @@ bytemuck = { version = "1.6.3", features = ["derive"] }
 tuple = { version = "0.5.1", default-features = false }
 
 [target.'cfg(not(any(target_arch = "spirv")))'.dependencies]
-strum = "0.25.0"
+strum = { version = "0.25.0", features = ["derive"] }
 winit = { version = "0.28.3" }

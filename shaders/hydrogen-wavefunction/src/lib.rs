@@ -95,3 +95,30 @@ pub fn main_vs(
 ) {
     fullscreen_vs(vert_id, out_pos)
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use numeric_integration::integrate_3d;
+    use shared::assert_similar;
+
+    #[test]
+    fn test_hydrogen_wavefunction() {
+        for n in 0..5 {
+            for l in 0u32..n {
+                for m in 1 - (l as i32)..=l as i32 {
+                    let f = |pos: Vec3| {
+                        let (r, theta, phi) = to_spherical(pos);
+                        let v = hydrogen_wavefunction(n, l, m, r, theta, phi);
+                        v.norm_squared()
+                    };
+                    let d = A * 35.0;
+                    let total_probability =
+                        integrate_3d(&f, Vec3::splat(-d), Vec3::splat(d), [25; 3]);
+                    // Accuracy increases with more samples
+                    assert_similar!(total_probability, 1.0, 0.02);
+                }
+            }
+        }
+    }
+}
