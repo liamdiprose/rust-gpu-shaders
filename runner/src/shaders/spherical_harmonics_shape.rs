@@ -8,7 +8,7 @@ use shared::{
     spherical_harmonics::*,
 };
 use std::{
-    f32::consts::{PI, TAU},
+    f32::consts::{FRAC_1_SQRT_2, PI, TAU},
     time::Instant,
 };
 use strum::IntoEnumIterator;
@@ -26,7 +26,7 @@ pub struct Controller {
     rot: Quat,
     mouse_button_pressed: bool,
     shader_constants: ShaderConstants,
-    vertices: Vec<Vertex>,
+    buffers: (Vec<Vertex>, Vec<u32>),
     camera: crate::camera::Camera,
     l: u32,
     m: i32,
@@ -39,6 +39,7 @@ impl crate::controller::Controller for Controller {
     fn new(size: PhysicalSize<u32>) -> Self {
         let l = 2;
         let m = 1;
+        let variant = Variant::Real;
 
         Self {
             size,
@@ -48,7 +49,7 @@ impl crate::controller::Controller for Controller {
             rot: Quat::IDENTITY,
             mouse_button_pressed: false,
             shader_constants: ShaderConstants::zeroed(),
-            vertices: create_vertices(m, l),
+            buffers: create_buffers(m, l, variant),
             camera: crate::camera::Camera {
                 eye: Vec3::Z * 2.0,
                 target: Vec3::ZERO,
@@ -60,7 +61,7 @@ impl crate::controller::Controller for Controller {
             },
             l,
             m,
-            variant: Variant::Real,
+            variant,
             negative_m: false,
             include_time_factor: false,
         }
@@ -140,6 +141,7 @@ impl crate::controller::Controller for Controller {
                 && self.variant != variant
             {
                 self.variant = variant;
+                self.buffers = create_buffers(self.m, self.l, self.variant);
                 signal_new_vertices(event_proxy);
             }
         }
@@ -176,7 +178,7 @@ impl crate::controller::Controller for Controller {
                 self.m = -self.m;
             }
             if prev_l != self.l || prev_m != self.m {
-                self.vertices = create_vertices(self.m, self.l);
+                self.buffers = create_buffers(self.m, self.l, self.variant);
                 signal_new_vertices(event_proxy)
             }
         }
@@ -222,8 +224,8 @@ impl crate::controller::Controller for Controller {
         ui.advance_cursor_after_rect(rect);
     }
 
-    fn vertices(&self) -> Option<&[Vertex]> {
-        Some(self.vertices.as_slice())
+    fn buffers(&self) -> Option<(&[Vertex], &[u32])> {
+        Some((self.buffers.0.as_slice(), self.buffers.1.as_slice()))
     }
 }
 
@@ -233,51 +235,46 @@ fn signal_new_vertices(event_proxy: &EventLoopProxy<UserEvent>) {
     }
 }
 
-fn create_vertices(m: i32, l: u32) -> Vec<Vertex> {
+fn create_buffers(m: i32, l: u32, variant: Variant) -> (Vec<Vertex>, Vec<u32>) {
     const I_MAX: u32 = 220;
     const J_MAX: u32 = 220;
-    let mut vertices = Vec::with_capacity((I_MAX * J_MAX * 6) as usize);
-    for i in 0..I_MAX {
-        let theta1 = PI * i as f32 / I_MAX as f32;
-        let theta2 = PI * (i + 1) as f32 / I_MAX as f32;
-        for j in 0..J_MAX {
-            let phi1 = TAU * j as f32 / J_MAX as f32;
-            let phi2 = TAU * (j + 1) as f32 / J_MAX as f32;
+    let vertices = (0..I_MAX)
+        .flat_map(|i| {
+            let theta1 = PI * i as f32 / I_MAX as f32;
+            let theta2 = PI * (i + 1) as f32 / I_MAX as f32;
+            (0..J_MAX).flat_map(move |j| {
+                let phi1 = TAU * j as f32 / J_MAX as f32;
+                let phi2 = TAU * (j + 1) as f32 / J_MAX as f32;
 
-            let r11 = real_spherical_harmonic(m, l, theta1, phi1, 0.0);
-            let p11 = from_spherical(r11.abs(), theta1, phi1);
-            let r12 = real_spherical_harmonic(m, l, theta1, phi2, 0.0);
-            let p12 = from_spherical(r12.abs(), theta1, phi2);
-            let r21 = real_spherical_harmonic(m, l, theta2, phi1, 0.0);
-            let p21 = from_spherical(r21.abs(), theta2, phi1);
-            let r22 = real_spherical_harmonic(m, l, theta2, phi2, 0.0);
-            let p22 = from_spherical(r22.abs(), theta2, phi2);
-
-            vertices.push(Vertex {
-                position: p11.into(),
-                color: vec3(1.0, r11, -r11).into(),
-            });
-            vertices.push(Vertex {
-                position: p12.into(),
-                color: vec3(1.0, r12, -r12).into(),
-            });
-            vertices.push(Vertex {
-                position: p22.into(),
-                color: vec3(1.0, r22, -r22).into(),
-            });
-            vertices.push(Vertex {
-                position: p11.into(),
-                color: vec3(1.0, r11, -r11).into(),
-            });
-            vertices.push(Vertex {
-                position: p21.into(),
-                color: vec3(1.0, r21, -r21).into(),
-            });
-            vertices.push(Vertex {
-                position: p22.into(),
-                color: vec3(1.0, r22, -r22).into(),
-            });
-        }
-    }
-    vertices
+                [theta1, theta2].into_iter().flat_map(move |theta| {
+                    [phi1, phi2].map(move |phi| match variant {
+                        Variant::Real => {
+                            let r = real_spherical_harmonic(m, l, theta, phi, 0.0);
+                            let gb = -r * FRAC_1_SQRT_2;
+                            Vertex {
+                                position: from_spherical(r.abs(), theta, phi).into(),
+                                color: vec3(r, gb, gb).into(),
+                            }
+                        }
+                        Variant::Complex => {
+                            let z = spherical_harmonic(m, l, theta, phi, 0.0);
+                            Vertex {
+                                position: from_spherical(z.norm(), theta, phi).into(),
+                                color: vec3(
+                                    z.dot(Vec2::X),
+                                    z.dot(vec2(-FRAC_1_SQRT_2, FRAC_1_SQRT_2)),
+                                    z.dot(Vec2::splat(-FRAC_1_SQRT_2)),
+                                )
+                                .into(),
+                            }
+                        }
+                    })
+                })
+            })
+        })
+        .collect();
+    let indices = (0..I_MAX * J_MAX)
+        .flat_map(|i| [0, 1, 3, 0, 2, 3].map(|x| x + i * 4))
+        .collect();
+    (vertices, indices)
 }
