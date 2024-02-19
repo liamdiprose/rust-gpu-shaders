@@ -8,6 +8,7 @@ pub mod sdf_2d;
 pub mod sdf_3d;
 pub mod spherical_harmonics;
 pub mod tuple;
+pub mod assert;
 pub mod numeric_integration;
 
 use spirv_std::glam::{vec2, Vec2, Vec4};
