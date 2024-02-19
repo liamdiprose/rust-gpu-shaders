@@ -120,6 +120,20 @@ impl Sub for Complex {
     }
 }
 
+impl AddAssign for Complex {
+    fn add_assign(&mut self, other: Self) {
+        self.x += other.x;
+        self.y += other.y;
+    }
+}
+
+impl SubAssign for Complex {
+    fn sub_assign(&mut self, other: Self) {
+        self.x -= other.x;
+        self.y -= other.y;
+    }
+}
+
 impl Mul for Complex {
     type Output = Self;
     fn mul(self, other: Self) -> Self::Output {
@@ -166,5 +180,25 @@ impl Neg for Complex {
     type Output = Self;
     fn neg(self) -> Self::Output {
         Complex::new(-self.x, -self.y)
+    }
+}
+
+#[cfg(not(target_arch = "spirv"))]
+impl std::fmt::Display for Complex {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        if self.y == 0.0 {
+            write!(f, "{}", self.x)
+        } else if self.y < 0.0 {
+            write!(f, "{} - {}i", self.x, -self.y)
+        } else {
+            write!(f, "{} + {}i", self.x, self.y)
+        }
+    }
+}
+
+#[cfg(not(target_arch = "spirv"))]
+impl std::fmt::Debug for Complex {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Complex({}, {})", self.x, self.y)
     }
 }
