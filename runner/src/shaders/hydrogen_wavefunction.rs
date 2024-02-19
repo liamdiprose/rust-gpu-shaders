@@ -1,11 +1,12 @@
+use crate::window::UserEvent;
 use bytemuck::Zeroable;
 use egui::{vec2, Context, Vec2};
 use shared::push_constants::hydrogen_wavefunction::ShaderConstants;
 use std::time::Instant;
-use winit::event::{ElementState, MouseScrollDelta};
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
-    event::MouseButton,
+    event::{ElementState, MouseButton, MouseScrollDelta},
+    event_loop::EventLoopProxy,
 };
 
 pub struct Controller {
@@ -15,12 +16,13 @@ pub struct Controller {
     drag_start: Vec2,
     drag_end: Vec2,
     camera: Vec2,
-    zoom: f32,
+    camera_distance: f32,
     mouse_button_pressed: bool,
     shader_constants: ShaderConstants,
     n: i32,
     l: i32,
     m: i32,
+    root: i32,
 }
 
 impl crate::controller::Controller for Controller {
@@ -32,12 +34,13 @@ impl crate::controller::Controller for Controller {
             drag_start: Vec2::ZERO,
             drag_end: Vec2::ZERO,
             camera: Vec2::ZERO,
-            zoom: 1.0,
+            camera_distance: 30.0,
             mouse_button_pressed: false,
             shader_constants: ShaderConstants::zeroed(),
             n: 1,
             l: 0,
             m: 0,
+            root: 2,
         }
     }
 
@@ -82,7 +85,7 @@ impl crate::controller::Controller for Controller {
                 }
             }
         };
-        self.zoom *= scroll;
+        self.camera_distance *= scroll;
         // self.camera *= 1.0 / scroll;
     }
 
@@ -98,14 +101,16 @@ impl crate::controller::Controller for Controller {
             time: self.start.elapsed().as_secs_f32(),
             cursor_x: self.cursor.x,
             cursor_y: self.cursor.y,
-            zoom: self.zoom,
+            camera_distance: self.camera_distance,
             translate_x: self.camera.x + self.drag_start.x - self.drag_end.x,
             translate_y: self.camera.y + self.drag_start.y - self.drag_end.y,
             mouse_button_pressed: !(1 << self.mouse_button_pressed as u32),
             n: self.n as u32,
             l: self.l as u32,
             m: self.m,
+            root: self.root,
         };
+        println!("{}", self.camera_distance);
     }
 
     fn push_constants(&self) -> &[u8] {
@@ -116,7 +121,15 @@ impl crate::controller::Controller for Controller {
         true
     }
 
-    fn ui(&mut self, _ctx: &Context, ui: &mut egui::Ui) {
+    fn ui(&mut self, _ctx: &Context, ui: &mut egui::Ui, _: &EventLoopProxy<UserEvent>) {
+        ui.horizontal(|ui| {
+            ui.label("root:");
+            ui.add(
+                egui::DragValue::new(&mut self.root)
+                    .clamp_range(1..=6)
+                    .speed(0.1),
+            );
+        });
         ui.horizontal(|ui| {
             ui.label("n:");
             ui.add(
