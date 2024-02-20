@@ -35,6 +35,12 @@ pub struct Size {
     pub height: u32,
 }
 
+impl Size {
+    pub fn aspect_ratio(self) -> f32 {
+        self.width as f32 / self.height as f32
+    }
+}
+
 #[cfg(not(target_arch = "spirv"))]
 impl From<PhysicalSize<u32>> for Size {
     fn from(PhysicalSize { width, height }: PhysicalSize<u32>) -> Self {
@@ -52,6 +58,12 @@ pub struct Vec2 {
 impl From<glam::Vec2> for Vec2 {
     fn from(glam::Vec2 { x, y }: glam::Vec2) -> Self {
         Self { x, y }
+    }
+}
+
+impl Into<glam::Vec2> for Vec2 {
+    fn into(self) -> glam::Vec2 {
+        glam::vec2(self.x, self.y)
     }
 }
 

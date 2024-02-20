@@ -1,3 +1,4 @@
+use super::{Size, Vec2};
 use bytemuck::{Pod, Zeroable};
 
 #[cfg_attr(not(target_arch = "spirv"), derive(strum::EnumIter, strum::Display))]
@@ -102,14 +103,17 @@ impl Shape {
     pub fn params(&self) -> Params {
         let is_radial = self.spec().is_radial;
         Params {
-            dim1: if is_radial { 0.2 } else { 0.5 },
-            dim2: if is_radial { 0.05 } else { 0.2 },
-            x0: 0.0,
-            y0: 0.0,
-            x1: 0.2,
-            y1: 0.2,
-            x2: -0.4,
-            y2: 0.35,
+            dim: if is_radial {
+                Vec2 { x: 0.2, y: 0.05 }
+            } else {
+                Vec2 { x: 0.5, y: 0.2 }
+            },
+            ps: [
+                Vec2 { x: 0.0, y: 0.0 },
+                Vec2 { x: 0.2, y: 0.2 },
+                Vec2 { x: -0.4, y: 0.35 },
+            ],
+            rot: 0.0,
         }
     }
 }
@@ -123,30 +127,22 @@ pub struct ShapeSpec {
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
 pub struct Params {
-    pub dim1: f32,
-    pub dim2: f32,
-    pub x0: f32,
-    pub y0: f32,
-    pub x1: f32,
-    pub y1: f32,
-    pub x2: f32,
-    pub y2: f32,
+    pub dim: Vec2,
+    pub ps: [Vec2; 3],
+    pub rot: f32,
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
 pub struct ShaderConstants {
-    pub width: u32,
-    pub height: u32,
+    pub size: Size,
     pub time: f32,
 
-    pub cursor_x: f32,
-    pub cursor_y: f32,
+    pub cursor: Vec2,
 
     /// Bit mask of the pressed buttons (0 = Left, 1 = Middle, 2 = Right).
     pub mouse_button_pressed: u32,
 
-    pub rotation: f32,
     pub shape: u32,
     pub params: Params,
 }

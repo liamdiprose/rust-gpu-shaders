@@ -15,36 +15,16 @@ use winit::{
 
 use crate::window::UserEvent;
 
-#[derive(Clone)]
-pub struct Options {
-    pub shape: Shape,
-    pub can_drag: bool,
-    pub is_dragging: bool,
-    pub params: Vec<Params>,
-}
-
-impl Options {
-    pub fn new() -> Self {
-        Self {
-            shape: Shape::Circle,
-            can_drag: false,
-            is_dragging: false,
-            params: Shape::iter().map(|shape| shape.params()).collect(),
-        }
-    }
-}
-
 pub struct Controller {
     size: PhysicalSize<u32>,
     start: Instant,
     elapsed: Duration,
     cursor: Vec2,
-    rotation: f32,
     mouse_button_pressed: bool,
     can_drag: Option<usize>,
     drag_point: Option<usize>,
-    points: [Vec2; 3],
-    options: Options,
+    shape: Shape,
+    params: Vec<Params>,
     shader_constants: ShaderConstants,
 }
 
@@ -55,12 +35,11 @@ impl crate::controller::Controller for Controller {
             start: Instant::now(),
             elapsed: Duration::ZERO,
             cursor: Vec2::ZERO,
-            rotation: 0.0,
             mouse_button_pressed: false,
             can_drag: None,
             drag_point: None,
-            points: [vec2(0.0, 0.0), vec2(0.1, 0.2), vec2(-0.4, 0.3)],
-            options: Options::new(),
+            shape: Shape::Circle,
+            params: Shape::iter().map(|shape| shape.params()).collect(),
             shader_constants: ShaderConstants::zeroed(),
         }
     }
@@ -82,18 +61,27 @@ impl crate::controller::Controller for Controller {
 
     fn mouse_move(&mut self, position: PhysicalPosition<f64>) {
         self.cursor = vec2(position.x as f32, position.y as f32);
-        let num_points = self.options.shape.spec().num_points;
+        let num_points = self.shape.spec().num_points;
         if let Some(i) = self.drag_point {
-            self.points[i] = rotate(&self.from_pixels(self.cursor), self.rotation);
+            self.params[self.shape as usize].ps[i] = rotate(
+                self.from_pixels(self.cursor),
+                self.params[self.shape as usize].rot,
+            )
+            .into();
         } else if num_points > 0 {
-            self.can_drag = self.points[0..num_points as usize].iter().position(|p| {
-                (rotate(p, -self.rotation) - self.from_pixels(self.cursor)).length() < 0.01
-            });
+            self.can_drag = self.params[self.shape as usize].ps[0..num_points as usize]
+                .iter()
+                .position(|p| {
+                    (rotate((*p).into(), -self.params[self.shape as usize].rot)
+                        - self.from_pixels(self.cursor))
+                    .length()
+                        < 0.01
+                });
         }
     }
 
     fn mouse_scroll(&mut self, delta: MouseScrollDelta) {
-        self.rotation += PI / 30.0
+        self.params[self.shape as usize].rot += PI / 30.0
             * match delta {
                 MouseScrollDelta::LineDelta(_, y) => y,
                 MouseScrollDelta::PixelDelta(p) => {
@@ -108,29 +96,15 @@ impl crate::controller::Controller for Controller {
     }
 
     fn update(&mut self) {
-        self.options.can_drag = self.can_drag.is_some();
-        self.options.is_dragging = self.drag_point.is_some();
         self.elapsed = self.start.elapsed();
         self.shader_constants = ShaderConstants {
-            width: self.size.width,
-            height: self.size.height,
+            size: self.size.into(),
             time: self.elapsed.as_secs_f32(),
-            cursor_x: self.cursor.x,
-            cursor_y: self.cursor.y,
+            cursor: self.cursor.into(),
             mouse_button_pressed: !(1
-                << (self.mouse_button_pressed && !self.options.is_dragging) as u32),
-            rotation: self.rotation,
-
-            shape: self.options.shape as u32,
-            params: Params {
-                x0: self.points[0].x,
-                y0: self.points[0].y,
-                x1: self.points[1].x,
-                y1: self.points[1].y,
-                x2: self.points[2].x,
-                y2: self.points[2].y,
-                ..self.options.params[self.options.shape as usize]
-            },
+                << (self.mouse_button_pressed && self.drag_point.is_none()) as u32),
+            shape: self.shape as u32,
+            params: self.params[self.shape as usize],
         };
     }
 
@@ -143,26 +117,25 @@ impl crate::controller::Controller for Controller {
     }
 
     fn ui(&mut self, ctx: &Context, ui: &mut egui::Ui, _: &EventLoopProxy<UserEvent>) {
-        ctx.set_cursor_icon(if self.options.is_dragging {
+        ctx.set_cursor_icon(if self.drag_point.is_some() {
             CursorIcon::Grabbing
-        } else if self.options.can_drag {
+        } else if self.can_drag.is_some() {
             CursorIcon::Grab
         } else {
             CursorIcon::Default
         });
         for shape in Shape::iter() {
-            ui.radio_value(&mut self.options.shape, shape, shape.to_string());
+            ui.radio_value(&mut self.shape, shape, shape.to_string());
         }
-        let spec = self.options.shape.spec();
+        let spec = self.shape.spec();
         if spec.num_dims > 0 {
-            let params = &mut self.options.params[self.options.shape as usize];
+            let params = &mut self.params[self.shape as usize];
             let (dim1_max, dim2_max, dim1_label, dim2_label) = {
                 if spec.is_radial {
-                    (0.5, params.dim1, "Radius", "Radius2")
+                    (0.5, params.dim.x, "Radius", "Radius2")
                 } else {
                     (
-                        (self.shader_constants.width as f32)
-                            / (self.shader_constants.height as f32),
+                        self.shader_constants.size.aspect_ratio(),
                         1.0,
                         "Width",
                         "Height",
@@ -172,7 +145,7 @@ impl crate::controller::Controller for Controller {
             ui.horizontal(|ui| {
                 ui.label(dim1_label);
                 ui.add(
-                    egui::DragValue::new(&mut params.dim1)
+                    egui::DragValue::new(&mut params.dim.x)
                         .clamp_range(0.0..=dim1_max)
                         .speed(0.01),
                 );
@@ -181,7 +154,7 @@ impl crate::controller::Controller for Controller {
                 ui.horizontal(|ui| {
                     ui.label(dim2_label);
                     ui.add(
-                        egui::DragValue::new(&mut params.dim2)
+                        egui::DragValue::new(&mut params.dim.y)
                             .clamp_range(0.0..=dim2_max)
                             .speed(0.01),
                     );
@@ -199,6 +172,6 @@ impl Controller {
     }
 }
 
-fn rotate(p: &Vec2, angle: f32) -> Vec2 {
+fn rotate(p: Vec2, angle: f32) -> Vec2 {
     p.rotate(Vec2::from_angle(angle))
 }

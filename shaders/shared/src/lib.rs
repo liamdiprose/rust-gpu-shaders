@@ -11,6 +11,7 @@ pub mod tuple;
 pub mod assert;
 pub mod numeric_integration;
 
+use push_constants::Size;
 use spirv_std::glam::{vec2, Vec2, Vec4};
 
 pub const SQRT_3: f32 = 1.732050807568877293527446341505872367;
@@ -32,4 +33,8 @@ pub fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
     let x = saturate((x - edge0) / (edge1 - edge0));
     // Evaluate polynomial
     x * x * (3.0 - 2.0 * x)
+}
+
+pub fn from_pixels(Vec2 { x, y }: Vec2, Size { width, height }: Size) -> Vec2 {
+    (vec2(x, -y) - 0.5 * vec2(width as f32, -(height as f32))) / height as f32
 }
