@@ -55,6 +55,10 @@ pub struct Vec2 {
     pub y: f32,
 }
 
+pub fn vec2(x: f32, y: f32) -> Vec2 {
+    Vec2 { x, y }
+}
+
 impl From<glam::Vec2> for Vec2 {
     fn from(glam::Vec2 { x, y }: glam::Vec2) -> Self {
         Self { x, y }
@@ -64,6 +68,30 @@ impl From<glam::Vec2> for Vec2 {
 impl Into<glam::Vec2> for Vec2 {
     fn into(self) -> glam::Vec2 {
         glam::vec2(self.x, self.y)
+    }
+}
+
+#[derive(Copy, Clone, Pod, Zeroable)]
+#[repr(C)]
+pub struct Vec3 {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
+pub fn vec3(x: f32, y: f32, z: f32) -> Vec3 {
+    Vec3 { x, y, z }
+}
+
+impl From<glam::Vec3> for Vec3 {
+    fn from(glam::Vec3 { x, y, z }: glam::Vec3) -> Self {
+        Self { x, y, z }
+    }
+}
+
+impl Into<glam::Vec3> for Vec3 {
+    fn into(self) -> glam::Vec3 {
+        glam::vec3(self.x, self.y, self.z)
     }
 }
 

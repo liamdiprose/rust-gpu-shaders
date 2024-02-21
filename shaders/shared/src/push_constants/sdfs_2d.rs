@@ -1,4 +1,4 @@
-use super::{Size, Vec2};
+use super::{vec2, Size, Vec2};
 use bytemuck::{Pod, Zeroable};
 
 #[cfg_attr(not(target_arch = "spirv"), derive(strum::EnumIter, strum::Display))]
@@ -104,15 +104,11 @@ impl Shape {
         let is_radial = self.spec().is_radial;
         Params {
             dim: if is_radial {
-                Vec2 { x: 0.2, y: 0.05 }
+                vec2(0.2, 0.05)
             } else {
-                Vec2 { x: 0.5, y: 0.2 }
+                vec2(0.5, 0.2)
             },
-            ps: [
-                Vec2 { x: 0.0, y: 0.0 },
-                Vec2 { x: 0.2, y: 0.2 },
-                Vec2 { x: -0.4, y: 0.35 },
-            ],
+            ps: [vec2(0.0, 0.0), vec2(0.2, 0.2), vec2(-0.4, 0.35)],
             rot: 0.0,
         }
     }
