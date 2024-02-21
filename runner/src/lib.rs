@@ -11,6 +11,9 @@ mod shaders;
 mod state;
 mod ui;
 mod window;
+mod model;
+mod camera;
+mod texture;
 
 #[derive(EnumString, EnumIter, Display, PartialEq, Eq, Copy, Clone)]
 pub enum RustGPUShader {
@@ -24,6 +27,7 @@ pub enum RustGPUShader {
     HydrogenWavefunction,
     SphericalHarmonics,
     Gaussian
+    SphericalHarmonicsShape,
 }
 
 #[derive(StructOpt, Clone)]

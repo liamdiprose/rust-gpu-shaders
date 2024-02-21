@@ -1,9 +1,17 @@
+use crate::model::Vertex;
 use crate::window::UserEvent;
 use bytemuck::Zeroable;
 use egui::{Color32, Context, Rect, RichText, Sense, Stroke, Ui};
-use glam::{vec2, Quat, Vec2};
-use shared::push_constants::spherical_harmonics::{ShaderConstants, Variant};
-use std::{f32::consts::PI, time::Instant};
+use glam::{vec2, vec3, Quat, Vec2, Vec3, Vec3Swizzles};
+use shared::{
+    push_constants::spherical_harmonics_shape::{ShaderConstants, Variant},
+    spherical_harmonics::*,
+};
+use std::{
+    f32::consts::{FRAC_1_SQRT_2, PI, TAU},
+    time::Instant,
+};
+use strum::IntoEnumIterator;
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
     event::{ElementState, MouseButton, MouseScrollDelta},
@@ -14,36 +22,48 @@ pub struct Controller {
     size: PhysicalSize<u32>,
     start: Instant,
     cursor: Vec2,
-    drag_start: Vec2,
-    drag_end: Vec2,
-    quat: Quat,
-    zoom: f32,
+    last_cursor: Vec2,
+    rot: Quat,
     mouse_button_pressed: bool,
     shader_constants: ShaderConstants,
+    buffers: (Vec<Vertex>, Vec<u32>),
+    camera: crate::camera::Camera,
     l: u32,
     m: i32,
+    variant: Variant,
     negative_m: bool,
     include_time_factor: bool,
-    variant: Variant,
 }
 
 impl crate::controller::Controller for Controller {
     fn new(size: PhysicalSize<u32>) -> Self {
+        let l = 2;
+        let m = 1;
+        let variant = Variant::Real;
+
         Self {
             size,
             start: Instant::now(),
             cursor: Vec2::ZERO,
-            drag_start: Vec2::ZERO,
-            drag_end: Vec2::ZERO,
-            quat: Quat::IDENTITY,
-            zoom: 1.0,
+            last_cursor: Vec2::ZERO,
+            rot: Quat::IDENTITY,
             mouse_button_pressed: false,
             shader_constants: ShaderConstants::zeroed(),
-            l: 2,
-            m: 1,
+            buffers: create_buffers(m, l, variant),
+            camera: crate::camera::Camera {
+                eye: Vec3::Z * 2.0,
+                target: Vec3::ZERO,
+                up: Vec3::Y,
+                aspect: size.width as f32 / size.height as f32,
+                fovy: 45.0,
+                znear: 0.1,
+                zfar: 100.0,
+            },
+            l,
+            m,
+            variant,
             negative_m: false,
             include_time_factor: false,
-            variant: Variant::Real,
         }
     }
 
@@ -51,27 +71,24 @@ impl crate::controller::Controller for Controller {
         if button == MouseButton::Left {
             self.mouse_button_pressed = match state {
                 ElementState::Pressed => true,
-                ElementState::Released => {
-                    let angles = PI * (self.drag_start - self.drag_end) / self.size.height as f32;
-                    self.quat = self
-                        .quat
-                        .mul_quat(Quat::from_rotation_y(-angles.x))
-                        .mul_quat(Quat::from_rotation_x(angles.y))
-                        .normalize();
-                    false
-                }
+                ElementState::Released => false,
             };
-
-            self.drag_start = self.cursor;
-            self.drag_end = self.cursor;
         }
     }
 
     fn mouse_move(&mut self, position: PhysicalPosition<f64>) {
         self.cursor = vec2(position.x as f32, position.y as f32);
         if self.mouse_button_pressed {
-            self.drag_end = self.cursor;
+            let angles = PI * (self.cursor - self.last_cursor) / self.size.height as f32;
+            let e = self.camera.eye.abs();
+            let p = vec3(
+                angles.y * (e.y + e.z),
+                angles.x * (e.x + e.z),
+                angles.dot(e.yx()),
+            );
+            self.rot = Quat::from_scaled_axis(p).mul_quat(self.rot).normalize();
         }
+        self.last_cursor = self.cursor;
     }
 
     fn mouse_scroll(&mut self, delta: MouseScrollDelta) {
@@ -93,33 +110,18 @@ impl crate::controller::Controller for Controller {
                 }
             }
         };
-        self.zoom *= scroll;
+        self.camera.eye *= scroll;
     }
 
     fn resize(&mut self, size: PhysicalSize<u32>) {
         self.size = size;
+        self.camera.aspect = size.width as f32 / size.height as f32;
     }
 
     fn update(&mut self) {
-        let angles = PI * (self.drag_start - self.drag_end) / self.size.height as f32;
-        let quat = self
-            .quat
-            .mul_quat(Quat::from_rotation_y(-angles.x))
-            .mul_quat(Quat::from_rotation_x(angles.y));
         self.shader_constants = ShaderConstants {
-            size: self.size.into(),
-            time: if self.include_time_factor {
-                self.start.elapsed().as_secs_f32()
-            } else {
-                0.0
-            },
-            cursor: self.cursor.into(),
-            zoom: self.zoom,
-            mouse_button_pressed: !(1 << self.mouse_button_pressed as u32),
-            l: self.l,
-            m: self.m,
-            quat: quat.into(),
-            variant: self.variant as u32,
+            rot: self.rot.into(),
+            view_proj: self.camera.build_view_projection_matrix().into(),
         };
     }
 
@@ -131,9 +133,18 @@ impl crate::controller::Controller for Controller {
         true
     }
 
-    fn ui(&mut self, ctx: &Context, ui: &mut Ui, _: &EventLoopProxy<UserEvent>) {
-        ui.radio_value(&mut self.variant, Variant::Real, "Real");
-        ui.radio_value(&mut self.variant, Variant::Complex, "Complex");
+    fn ui(&mut self, ctx: &Context, ui: &mut Ui, event_proxy: &EventLoopProxy<UserEvent>) {
+        for variant in Variant::iter() {
+            if ui
+                .radio(self.variant == variant, variant.to_string())
+                .clicked()
+                && self.variant != variant
+            {
+                self.variant = variant;
+                self.buffers = create_buffers(self.m, self.l, self.variant);
+                signal_new_vertices(event_proxy);
+            }
+        }
         if ui
             .checkbox(&mut self.include_time_factor, "Include time factor")
             .clicked()
@@ -148,6 +159,8 @@ impl crate::controller::Controller for Controller {
         if let Some(mouse_pos) = response.interact_pointer_pos() {
             let v = ((mouse_pos - rect.left_top()) * (l_max + 1) as f32 / rect.width())
                 .clamp(egui::Vec2::ZERO, egui::Vec2::splat(l_max as f32));
+            let prev_l = self.l;
+            let prev_m = self.m;
             if v.x > v.y {
                 let dif = v.x - v.y;
                 self.l = (v.y + (dif / 2.0)) as u32;
@@ -163,6 +176,10 @@ impl crate::controller::Controller for Controller {
             });
             if self.negative_m {
                 self.m = -self.m;
+            }
+            if prev_l != self.l || prev_m != self.m {
+                self.buffers = create_buffers(self.m, self.l, self.variant);
+                signal_new_vertices(event_proxy)
             }
         }
 
@@ -206,4 +223,58 @@ impl crate::controller::Controller for Controller {
         );
         ui.advance_cursor_after_rect(rect);
     }
+
+    fn buffers(&self) -> Option<(&[Vertex], &[u32])> {
+        Some((self.buffers.0.as_slice(), self.buffers.1.as_slice()))
+    }
+}
+
+fn signal_new_vertices(event_proxy: &EventLoopProxy<UserEvent>) {
+    if event_proxy.send_event(UserEvent::NewVerticesReady).is_err() {
+        panic!("Event loop dead");
+    }
+}
+
+fn create_buffers(m: i32, l: u32, variant: Variant) -> (Vec<Vertex>, Vec<u32>) {
+    const I_MAX: u32 = 220;
+    const J_MAX: u32 = 220;
+    let vertices = (0..I_MAX)
+        .flat_map(|i| {
+            let theta1 = PI * i as f32 / I_MAX as f32;
+            let theta2 = PI * (i + 1) as f32 / I_MAX as f32;
+            (0..J_MAX).flat_map(move |j| {
+                let phi1 = TAU * j as f32 / J_MAX as f32;
+                let phi2 = TAU * (j + 1) as f32 / J_MAX as f32;
+
+                [theta1, theta2].into_iter().flat_map(move |theta| {
+                    [phi1, phi2].map(move |phi| match variant {
+                        Variant::Real => {
+                            let r = real_spherical_harmonic(m, l, theta, phi, 0.0);
+                            let gb = -r * FRAC_1_SQRT_2;
+                            Vertex {
+                                position: from_spherical(r.abs(), theta, phi).into(),
+                                color: vec3(r, gb, gb).into(),
+                            }
+                        }
+                        Variant::Complex => {
+                            let z = spherical_harmonic(m, l, theta, phi, 0.0);
+                            Vertex {
+                                position: from_spherical(z.norm(), theta, phi).into(),
+                                color: vec3(
+                                    z.dot(Vec2::X),
+                                    z.dot(vec2(-FRAC_1_SQRT_2, FRAC_1_SQRT_2)),
+                                    z.dot(Vec2::splat(-FRAC_1_SQRT_2)),
+                                )
+                                .into(),
+                            }
+                        }
+                    })
+                })
+            })
+        })
+        .collect();
+    let indices = (0..I_MAX * J_MAX)
+        .flat_map(|i| [0, 1, 3, 0, 2, 3].map(|x| x + i * 4))
+        .collect();
+    (vertices, indices)
 }

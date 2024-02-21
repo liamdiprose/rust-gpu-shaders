@@ -1,8 +1,11 @@
+use crate::model::Vertex;
+use crate::window::UserEvent;
 use crate::{shaders, RustGPUShader};
 use egui::{Context, Ui};
 use shaders::*;
 use winit::dpi::PhysicalSize;
 use winit::event::{ElementState, MouseScrollDelta};
+use winit::event_loop::EventLoopProxy;
 use winit::{dpi::PhysicalPosition, event::MouseButton};
 
 pub trait Controller {
@@ -15,9 +18,12 @@ pub trait Controller {
     fn resize(&mut self, size: PhysicalSize<u32>);
     fn update(&mut self);
     fn push_constants(&self) -> &[u8];
-    fn ui(&mut self, _ctx: &Context, _ui: &mut Ui) {}
+    fn ui(&mut self, _ctx: &Context, _ui: &mut Ui, _event_proxy: &EventLoopProxy<UserEvent>) {}
     fn has_ui(&self) -> bool {
         false
+    }
+    fn buffers(&self) -> Option<(&[Vertex],&[u32])> {
+        None
     }
 }
 
@@ -35,5 +41,8 @@ pub fn new_controller(shader: RustGPUShader, size: PhysicalSize<u32>) -> Box<dyn
         }
         RustGPUShader::SphericalHarmonics => Box::new(spherical_harmonics::Controller::new(size)),
         RustGPUShader::Gaussian => Box::new(gaussian::Controller::new(size)),
+        RustGPUShader::SphericalHarmonicsShape => {
+            Box::new(spherical_harmonics_shape::Controller::new(size))
+        }
     }
 }

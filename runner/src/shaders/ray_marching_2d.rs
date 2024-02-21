@@ -2,9 +2,10 @@ use bytemuck::Zeroable;
 use egui::{vec2, Vec2};
 use shared::push_constants::ray_marching_2d::ShaderConstants;
 use std::time::{Duration, Instant};
-use winit::dpi::PhysicalSize;
-use winit::event::{ElementState, MouseScrollDelta};
-use winit::{dpi::PhysicalPosition, event::MouseButton};
+use winit::{
+    dpi::{PhysicalPosition, PhysicalSize},
+    event::{ElementState, MouseButton, MouseScrollDelta},
+};
 
 pub struct Controller {
     size: PhysicalSize<u32>,

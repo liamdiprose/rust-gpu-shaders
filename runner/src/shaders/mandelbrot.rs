@@ -1,11 +1,12 @@
+use crate::window::UserEvent;
 use bytemuck::Zeroable;
 use egui::{vec2, Context, Vec2};
 use shared::push_constants::mandelbrot::ShaderConstants;
 use std::time::Instant;
-use winit::event::{ElementState, MouseScrollDelta};
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
-    event::MouseButton,
+    event::{ElementState, MouseButton, MouseScrollDelta},
+    event_loop::EventLoopProxy,
 };
 
 pub struct Controller {
@@ -113,7 +114,7 @@ impl crate::controller::Controller for Controller {
         true
     }
 
-    fn ui(&mut self, _ctx: &Context, ui: &mut egui::Ui) {
+    fn ui(&mut self, _ctx: &Context, ui: &mut egui::Ui, _: &EventLoopProxy<UserEvent>) {
         ui.horizontal(|ui| {
             ui.label("Exponent:");
             ui.add(

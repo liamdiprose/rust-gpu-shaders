@@ -3,6 +3,7 @@ use crate::{
     controller::{new_controller, Controller},
     render_pass::RenderPass,
     shader::{self, CompiledShaderModules},
+    texture::Texture,
     ui::{Ui, UiState},
     window::Window,
     Options, RustGPUShader,
@@ -20,6 +21,7 @@ pub struct State {
     controllers: Vec<Box<dyn Controller>>,
     ui: Ui,
     ui_state: UiState,
+    depth_texture: Texture,
 }
 
 impl State {
@@ -34,14 +36,29 @@ impl State {
 
         let ui_state = UiState::new(options.shader);
 
+        let controllers = RustGPUShader::iter()
+            .map(|s| new_controller(s, window.window.inner_size()))
+            .collect::<Vec<Box<dyn Controller>>>();
+
+        let controller = &controllers[ui_state.active_shader as usize];
+
+        let rpass = RenderPass::new(
+            &ctx,
+            compiled_shader_modules,
+            options,
+            controller.buffers(),
+        );
+
+        let depth_texture =
+            Texture::create_depth_texture(&ctx.device, &ctx.config, "depth_texture");
+
         Self {
-            rpass: RenderPass::new(&ctx, compiled_shader_modules, options),
-            controllers: RustGPUShader::iter()
-                .map(|s| new_controller(s, window.window.inner_size()))
-                .collect(),
+            rpass,
+            controllers,
             ctx,
             ui,
             ui_state,
+            depth_texture,
         }
     }
 
@@ -57,6 +74,8 @@ impl State {
                 .surface
                 .configure(&self.ctx.device, &self.ctx.config);
             self.controller().resize(size);
+            self.depth_texture =
+                Texture::create_depth_texture(&self.ctx.device, &self.ctx.config, "depth_texture");
         }
     }
 
@@ -78,12 +97,15 @@ impl State {
 
     pub fn render(&mut self, window: &winit::window::Window) -> Result<(), wgpu::SurfaceError> {
         let controller = &mut *self.controllers[self.ui_state.active_shader as usize];
+        let depth_texture = controller.buffers().map(|_| &self.depth_texture);
+
         self.rpass.render(
             &self.ctx,
             window,
             &mut self.ui,
             &mut self.ui_state,
             controller,
+            depth_texture,
         )
     }
 
@@ -100,8 +122,15 @@ impl State {
     }
 
     pub fn new_module(&mut self, shader: RustGPUShader, new_module: CompiledShaderModules) {
+        let controller = &self.controllers[shader as usize];
+        let buffers = controller.buffers();
         self.ui_state.active_shader = shader;
-        self.rpass.new_module(&self.ctx, new_module);
+        self.rpass.new_module(&self.ctx, new_module, buffers);
+    }
+
+    pub fn new_vertices(&mut self) {
+        let controller = &self.controllers[self.ui_state.active_shader as usize];
+        self.rpass.new_vertices(&self.ctx, controller.buffers());
     }
 
     pub fn switch_shader(&mut self, shader: RustGPUShader) {

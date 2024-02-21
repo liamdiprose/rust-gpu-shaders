@@ -8,8 +8,8 @@ use spirv_std::num_traits::Float;
 pub struct Complex(Vec2);
 
 impl Complex {
-    pub fn new(x: f32, y: f32) -> Self {
-        Complex::from(Vec2::new(x, y))
+    pub const fn new(x: f32, y: f32) -> Self {
+        Complex(Vec2::new(x, y))
     }
     pub const ZERO: Complex = Complex(Vec2::ZERO);
     pub const ONE: Complex = Complex(Vec2::X);
@@ -22,8 +22,12 @@ impl Complex {
     }
 
     pub fn powf(self, exp: f32) -> Self {
-        let (r, theta) = self.to_polar();
-        Self::from_polar(r.powf(exp), theta * exp)
+        if exp == 0.0 {
+            Complex::ONE
+        } else {
+            let (r, theta) = self.to_polar();
+            Self::from_polar(r.powf(exp), theta * exp)
+        }
     }
 
     pub fn norm(self) -> f32 {
@@ -43,7 +47,7 @@ impl Complex {
     }
 
     pub fn from_polar(r: f32, theta: f32) -> Self {
-        Self::new(r * theta.cos(), r * theta.sin())
+        r * Complex::from_angle(theta)
     }
 
     pub fn sqrt(self) -> Self {
@@ -55,6 +59,10 @@ impl Complex {
 
     pub fn exp(self) -> Self {
         Self::from_polar(self.x.exp(), self.y)
+    }
+
+    pub fn from_angle(angle: f32) -> Self {
+        Complex(Vec2::from_angle(angle))
     }
 }
 
@@ -91,10 +99,38 @@ impl Add for Complex {
     }
 }
 
+impl Add<f32> for Complex {
+    type Output = Self;
+    fn add(self, x: f32) -> Self::Output {
+        Complex::new(self.x + x, self.y)
+    }
+}
+
+impl Add<Complex> for f32 {
+    type Output = Complex;
+    fn add(self, z: Complex) -> Self::Output {
+        Complex::new(self + z.x, z.y)
+    }
+}
+
 impl Sub for Complex {
     type Output = Self;
     fn sub(self, other: Self) -> Self::Output {
         Complex::new(self.x - other.x, self.y - other.y)
+    }
+}
+
+impl AddAssign for Complex {
+    fn add_assign(&mut self, other: Self) {
+        self.x += other.x;
+        self.y += other.y;
+    }
+}
+
+impl SubAssign for Complex {
+    fn sub_assign(&mut self, other: Self) {
+        self.x -= other.x;
+        self.y -= other.y;
     }
 }
 
@@ -144,5 +180,25 @@ impl Neg for Complex {
     type Output = Self;
     fn neg(self) -> Self::Output {
         Complex::new(-self.x, -self.y)
+    }
+}
+
+#[cfg(not(target_arch = "spirv"))]
+impl std::fmt::Display for Complex {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        if self.y == 0.0 {
+            write!(f, "{}", self.x)
+        } else if self.y < 0.0 {
+            write!(f, "{} - {}i", self.x, -self.y)
+        } else {
+            write!(f, "{} + {}i", self.x, self.y)
+        }
+    }
+}
+
+#[cfg(not(target_arch = "spirv"))]
+impl std::fmt::Debug for Complex {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Complex({}, {})", self.x, self.y)
     }
 }
