@@ -1,6 +1,7 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
 use shared::{
+    fast_optional::Optional_f32,
     push_constants::sdfs_3d::{sdf_shape, sdf_slice, Params, ShaderConstants, Shape},
     sdf_3d::{self as sdf, ops},
     *,
@@ -22,8 +23,8 @@ fn sdf_ball(p: Vec3, cursor: Vec3, cursor_d: f32) -> f32 {
     sdf::sphere(p - cursor, cursor_d)
 }
 
-fn sdf(p: Vec3, shape: Shape, slice_z: f32, params: Params) -> f32 {
-    ops::difference(sdf_shape(p, shape, params), sdf_slice(p, slice_z))
+fn sdf(p: Vec3, shape: Shape, slice_z: f32, params: Params, onion: Optional_f32) -> f32 {
+    ops::difference(sdf_shape(p, shape, params, onion), sdf_slice(p, slice_z))
 }
 
 #[derive(PartialEq)]
@@ -43,6 +44,7 @@ fn ray_march(
     cursor: Vec3,
     cursor_d: f32,
     mouse_pressed: bool,
+    onion: Optional_f32,
 ) -> (f32, RayMarchResult) {
     let mut d0 = 0.0;
     let mut result = RayMarchResult::Divergent;
@@ -50,7 +52,7 @@ fn ray_march(
     for _ in 0..MAX_STEPS {
         let p = ro + rd * d0;
         let slice_d = sdf_slice(p, slice_z);
-        let sliced_shape_d = ops::difference(sdf_shape(p, shape, params), slice_d);
+        let sliced_shape_d = ops::difference(sdf_shape(p, shape, params, onion), slice_d);
         let mut ds = sliced_shape_d;
         if mouse_pressed {
             let sliced_ball_d = ops::difference(sdf_ball(p, cursor, cursor_d), slice_d);
@@ -103,13 +105,20 @@ fn get_d_to_slice(ro: Vec3, rd: Vec3, slice_z: f32) -> f32 {
     }
 }
 
-fn get_d_at_slice(ro: Vec3, rd: Vec3, shape: Shape, slice_z: f32, params: Params) -> f32 {
+fn get_d_at_slice(
+    ro: Vec3,
+    rd: Vec3,
+    shape: Shape,
+    slice_z: f32,
+    params: Params,
+    onion: Optional_f32,
+) -> f32 {
     let x = (slice_z - ro.z) / rd.z;
     if x < 0.0 {
         MAX_DIST
     } else {
         let p = ro + rd * x;
-        sdf_shape(p, shape, params)
+        sdf_shape(p, shape, params, onion)
     }
 }
 
@@ -150,9 +159,10 @@ pub fn main_fs(
     let mouse_pressed = constants.mouse_button_pressed & 1 != 0;
 
     let shape = Shape::from_u32(constants.shape);
-    let slice_d = get_d_at_slice(ro, rd, shape, slice_z, constants.params);
-    let cursor_d = sdf_shape(cursor, shape, constants.params).abs();
-    let cursor_d2 = sdf_shape(cursor, shape, constants.params);
+    let onion = constants.onion;
+    let slice_d = get_d_at_slice(ro, rd, shape, slice_z, constants.params, onion);
+    let cursor_d = sdf_shape(cursor, shape, constants.params, onion).abs();
+    let cursor_d2 = sdf_shape(cursor, shape, constants.params, onion);
     let (d0, ray_march_result) = ray_march(
         ro,
         rd,
@@ -162,6 +172,7 @@ pub fn main_fs(
         cursor,
         cursor_d,
         mouse_pressed,
+        onion,
     );
 
     let col = {

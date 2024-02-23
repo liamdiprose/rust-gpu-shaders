@@ -184,3 +184,21 @@ impl Into<glam::Mat4> for Mat4 {
         )
     }
 }
+
+#[derive(Copy, Clone, Pod, Zeroable)]
+#[repr(C)]
+pub struct Bool {
+    pub value: u32,
+}
+
+impl From<bool> for Bool {
+    fn from(b: bool) -> Self {
+        Self { value: b as u32 }
+    }
+}
+
+impl Into<bool> for Bool {
+    fn into(self) -> bool {
+        self.value > 0
+    }
+}

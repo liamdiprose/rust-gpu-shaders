@@ -1,3 +1,4 @@
+use crate::egui_components::enabled_number::EnabledNumber;
 use crate::window::UserEvent;
 use bytemuck::Zeroable;
 use egui::{Context, CursorIcon};
@@ -32,6 +33,7 @@ pub struct Controller {
     camera: Vec2,
     slice_z: f32,
     cursor_3d_pos: Vec3,
+    onion: EnabledNumber,
 }
 
 impl crate::controller::Controller for Controller {
@@ -51,6 +53,7 @@ impl crate::controller::Controller for Controller {
             camera: vec2(0.2, -0.1),
             slice_z: 0.0,
             cursor_3d_pos: Vec3::ZERO,
+            onion: EnabledNumber::new(0.05, false),
         }
     }
 
@@ -147,10 +150,20 @@ impl crate::controller::Controller for Controller {
             }
             let mut p = (ro + rd * d0).xy().extend(self.slice_z);
 
-            let mut d = sdf_shape(p, self.shape, self.params[self.shape as usize]);
+            let mut d = sdf_shape(
+                p,
+                self.shape,
+                self.params[self.shape as usize],
+                self.onion.into(),
+            );
             while d > 1.0 {
                 p = (p.xy() + (-p.xy()).normalize() * (d - 1.0)).extend(self.slice_z);
-                d = sdf_shape(p, self.shape, self.params[self.shape as usize]);
+                d = sdf_shape(
+                    p,
+                    self.shape,
+                    self.params[self.shape as usize],
+                    self.onion.into(),
+                );
             }
 
             p
@@ -169,6 +182,7 @@ impl crate::controller::Controller for Controller {
             translate: self.camera.into(),
             shape: self.shape as u32,
             params: self.params[self.shape as usize],
+            onion: self.onion.into(),
         };
     }
 
@@ -188,6 +202,7 @@ impl crate::controller::Controller for Controller {
         } else {
             CursorIcon::Default
         });
+        self.onion.ui(ui, 0.0..=0.1, 0.01);
         for shape in Shape::iter() {
             ui.radio_value(&mut self.shape, shape, shape.to_string());
         }

@@ -1,4 +1,5 @@
 use super::{vec3, Size, Vec2, Vec3};
+use crate::fast_optional::Optional_f32;
 use bytemuck::{Pod, Zeroable};
 
 #[cfg_attr(not(target_arch = "spirv"), derive(strum::EnumIter, strum::Display))]
@@ -100,24 +101,38 @@ pub struct ShaderConstants {
     // pub rotation: f32,
     pub shape: u32,
     pub params: Params,
+    pub onion: Optional_f32,
 }
 
-pub fn sdf_shape(p: spirv_std::glam::Vec3, shape: Shape, params: Params) -> f32 {
+pub fn sdf_shape(
+    p: spirv_std::glam::Vec3,
+    shape: Shape,
+    params: Params,
+    onion: Optional_f32,
+) -> f32 {
     use crate::sdf_3d as sdf;
     use spirv_std::glam::{self, Vec3Swizzles};
     use Shape::*;
+
     let dim: glam::Vec3 = params.dim.into();
     let inner_dim: glam::Vec3 = params.inner_dim.into();
     let radius = dim.x;
     let p0 = params.ps[0].into();
     let p1 = params.ps[1].into();
-    match shape {
+
+    let mut d = match shape {
         Sphere => sdf::sphere(p, radius),
         Cuboid => sdf::cuboid(p, dim),
         CuboidFrame => sdf::cuboid_frame(p, dim, inner_dim),
         Capsule => sdf::capsule(p, p0, p1, radius),
         Torus => sdf::torus(p, dim.xy()),
+    };
+
+    if onion.has_value() {
+        d = sdf::ops::onion(d, onion.value)
     }
+
+    d
 }
 
 pub fn sdf_slice(p: spirv_std::glam::Vec3, slice_z: f32) -> f32 {
