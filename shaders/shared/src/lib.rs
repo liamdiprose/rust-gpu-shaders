@@ -11,6 +11,7 @@ pub mod tuple;
 pub mod assert;
 pub mod numeric_integration;
 pub mod fast_optional;
+pub mod ray_intersection;
 
 use push_constants::Size;
 use spirv_std::glam::{vec2, Vec2, Vec4};

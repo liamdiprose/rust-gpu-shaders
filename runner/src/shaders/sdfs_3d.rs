@@ -5,6 +5,7 @@ use egui::{Context, CursorIcon};
 use glam::{vec2, Mat3, Vec2, Vec3, Vec3Swizzles};
 use shared::{
     from_pixels,
+    ray_intersection::ray_intersects_sphere,
     push_constants::sdfs_3d::{sdf_shape, sdf_slice, Params, ShaderConstants, Shape},
 };
 use std::{
@@ -99,7 +100,7 @@ impl crate::controller::Controller for Controller {
                 .normalize();
             self.can_drag = self.params[self.shape as usize].ps[0..num_points as usize]
                 .iter()
-                .position(|p| ray_intersects_point(ro, rd, (*p).into(), 0.05));
+                .position(|p| ray_intersects_sphere(ro, rd, (*p).into(), 0.05));
         }
         if self.mouse_button_pressed & (1 << 2) != 0 {
             self.camera += PI * (self.cursor - self.prev_cursor) / self.size.height as f32;
@@ -277,22 +278,4 @@ impl crate::controller::Controller for Controller {
             }
         }
     }
-}
-
-fn ray_intersects_point(ro: Vec3, rd: Vec3, p: Vec3, r: f32) -> bool {
-    let v = ro - p;
-    let b = 2.0 * rd.dot(v);
-    let c = v.dot(v) - r * r;
-    let d = b * b - 4.0 * c;
-    if d > 0.0 {
-        let x1 = (-b - d.sqrt()) / 2.0;
-        let x2 = (-b + d.sqrt()) / 2.0;
-        if x1 >= 0.0 && x2 >= 0.0 {
-            return true;
-        }
-        if x1 < 0.0 && x2 >= 0.0 {
-            return true;
-        }
-    }
-    false
 }
