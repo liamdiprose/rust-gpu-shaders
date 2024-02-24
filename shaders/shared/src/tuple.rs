@@ -1,8 +1,24 @@
 pub use tuple::Map;
+use core::ops::*;
 
 pub trait MinElement {
     type Output;
     fn min_element(self) -> Self::Output;
+}
+
+pub trait MaxElement {
+    type Output;
+    fn max_element(self) -> Self::Output;
+}
+
+pub trait Sum {
+    type Output;
+    fn sum(self) -> Self::Output;
+}
+
+pub trait Product {
+    type Output;
+    fn product(self) -> Self::Output;
 }
 
 pub trait Zip {
@@ -16,11 +32,11 @@ macro_rules! replace_expr {
     };
 }
 
-macro_rules! min {
-    ($x:expr) => ( $x );
-    ($x:expr, $($xs:expr),+) => {
+macro_rules! reduce {
+    ($name:tt, $x:expr) => ( $x );
+    ($name:tt, $x:expr, $($xs:expr),+) => {
         {
-            ($x).min(min!($($xs),+))
+            $name($x, reduce!($name, $($xs),+))
         }
     };
 }
@@ -31,7 +47,28 @@ macro_rules! tuple_impls {
         {
             type Output = f32;
             fn min_element(self) -> Self::Output {
-                min!($(self.$idx),+)
+                reduce!((f32::min),$(self.$idx),+)
+            }
+        }
+        impl MaxElement for ($(replace_expr!($idx f32),)+)
+        {
+            type Output = f32;
+            fn max_element(self) -> Self::Output {
+                reduce!((f32::max),$(self.$idx),+)
+            }
+        }
+        impl Sum for ($(replace_expr!($idx f32),)+)
+        {
+            type Output = f32;
+            fn sum(self) -> Self::Output {
+                reduce!((f32::add), $(self.$idx),+)
+            }
+        }
+        impl Product for ($(replace_expr!($idx f32),)+)
+        {
+            type Output = f32;
+            fn product(self) -> Self::Output {
+                reduce!((f32::mul), $(self.$idx),+)
             }
         }
         impl<T> Zip for ($(replace_expr!($idx T),)+) {
