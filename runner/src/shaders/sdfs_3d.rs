@@ -198,7 +198,7 @@ impl crate::controller::Controller for Controller {
     fn ui(&mut self, ctx: &Context, ui: &mut egui::Ui, _: &EventLoopProxy<UserEvent>) {
         ctx.set_cursor_icon(if self.drag_point.is_some() {
             CursorIcon::Grabbing
-        } else if self.can_drag.is_some() {
+        } else if self.can_drag.is_some() && self.mouse_button_pressed == 0 {
             CursorIcon::Grab
         } else {
             CursorIcon::Default
