@@ -1,6 +1,7 @@
-use super::{vec3, Size, Vec2, Vec3};
+use super::{Size, Vec2, Vec3};
 use crate::fast_optional::Optional_f32;
 use bytemuck::{Pod, Zeroable};
+use core::ops::RangeInclusive;
 
 #[cfg_attr(not(target_arch = "spirv"), derive(strum::EnumIter, strum::Display))]
 #[derive(PartialEq, Copy, Clone)]
@@ -9,6 +10,7 @@ pub enum Shape {
     Sphere,
     Cuboid,
     CuboidFrame,
+    CuboidFrameRadial,
     Capsule,
     Torus,
 }
@@ -21,68 +23,87 @@ impl Shape {
             unsafe { core::mem::transmute(x) }
         }
     }
-
-    pub fn spec(self) -> ShapeSpec {
-        use Shape::*;
-        match self {
-            Sphere => ShapeSpec {
-                num_dims: 1,
-                num_points: 0,
-                is_radial: true,
-            },
-            Cuboid => ShapeSpec {
-                num_dims: 3,
-                num_points: 0,
-                is_radial: false,
-            },
-            CuboidFrame => ShapeSpec {
-                num_dims: 3,
-                num_points: 0,
-                is_radial: false,
-            },
-            Capsule => ShapeSpec {
-                num_dims: 1,
-                num_points: 2,
-                is_radial: true,
-            },
-            Torus => ShapeSpec {
-                num_dims: 2,
-                num_points: 0,
-                is_radial: true,
-            },
-        }
-    }
-
-    pub fn params(&self) -> Params {
-        let is_radial = self.spec().is_radial;
-        Params {
-            dim: if is_radial {
-                vec3(0.2, 0.1, 0.4)
-            } else {
-                vec3(0.5, 0.2, 0.4)
-            },
-            inner_dim: vec3(0.01, 0.01, 0.01),
-            ps: [
-                vec3(0.0, 0.0, 0.0),
-                vec3(0.2, 0.2, 0.1),
-                vec3(0.4, 0.35, 0.4),
-            ],
-        }
-    }
 }
 
-pub struct ShapeSpec {
-    pub num_dims: u32,
-    pub num_points: u32,
-    pub is_radial: bool,
+#[cfg(not(target_arch = "spirv"))]
+impl Shape {
+    pub fn labels(self) -> &'static [&'static str] {
+        use Shape::*;
+        const R: &'static str = "Radius";
+        const W: &'static str = "Width";
+        const H: &'static str = "Height";
+        const L: &'static str = "length";
+        match self {
+            Sphere => &[R],
+            Cuboid => &[W, H, L],
+            CuboidFrame => &[W, H, L, "Inner Width", "Inner Height", "Inner Length"],
+            CuboidFrameRadial => &[W, H, L, R],
+            Capsule => &[R],
+            Torus => &[R, "Inner Radius"],
+        }
+    }
+
+    pub fn default_params(&self) -> Params {
+        let default_ps = self.default_points();
+        let mut ps = [[0.0, 0.0, 0.0]; 3];
+        for i in 0..default_ps.len() {
+            ps[i] = default_ps[i];
+        }
+
+        let default_dims = self.default_dims();
+        let mut dims = [0.0; 6];
+        for i in 0..default_dims.len() {
+            dims[i] = default_dims[i];
+        }
+
+        Params { dims, ps }
+    }
+
+    pub fn dim_range(&self) -> &[RangeInclusive<f32>] {
+        use Shape::*;
+        match self {
+            Sphere => &[0.0..=0.5],
+            Cuboid => &[0.0..=0.5, 0.0..=0.5, 0.0..=0.5],
+            CuboidFrame => &[
+                0.0..=0.5,
+                0.0..=0.5,
+                0.0..=0.5,
+                0.0..=0.1,
+                0.0..=0.1,
+                0.0..=0.1,
+            ],
+            CuboidFrameRadial => &[0.0..=0.5, 0.0..=0.5, 0.0..=0.5, 0.0..=0.1],
+            Capsule => &[0.0..=0.5],
+            Torus => &[0.0..=0.5, 0.0..=0.5],
+        }
+    }
+
+    pub fn default_dims(&self) -> &[f32] {
+        use Shape::*;
+        match self {
+            Sphere => &[0.2],
+            Cuboid => &[0.4, 0.3, 0.4],
+            CuboidFrame => &[0.4, 0.3, 0.4, 0.02, 0.02, 0.02],
+            CuboidFrameRadial => &[0.4, 0.3, 0.4, 0.02],
+            Capsule => &[0.2],
+            Torus => &[0.2, 0.1],
+        }
+    }
+
+    pub fn default_points(&self) -> &[[f32; 3]] {
+        use Shape::*;
+        match self {
+            Capsule => &[[0.0, 0.0, -0.1], [0.1, 0.1, 0.2]],
+            _ => &[],
+        }
+    }
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
 pub struct Params {
-    pub dim: Vec3,
-    pub inner_dim: Vec3,
-    pub ps: [Vec3; 3],
+    pub dims: [f32; 6],
+    pub ps: [[f32; 3]; 3],
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -114,17 +135,17 @@ pub fn sdf_shape(
     use spirv_std::glam::{self, Vec3Swizzles};
     use Shape::*;
 
-    let dim: glam::Vec3 = params.dim.into();
-    let inner_dim: glam::Vec3 = params.inner_dim.into();
-    let radius = dim.x;
+    let dim = glam::vec3(params.dims[0], params.dims[1], params.dims[2]);
+    let dim2 = glam::vec3(params.dims[3], params.dims[4], params.dims[5]);
     let p0 = params.ps[0].into();
     let p1 = params.ps[1].into();
 
     let mut d = match shape {
-        Sphere => sdf::sphere(p, radius),
+        Sphere => sdf::sphere(p, dim.x),
         Cuboid => sdf::cuboid(p, dim),
-        CuboidFrame => sdf::cuboid_frame(p, dim, inner_dim),
-        Capsule => sdf::capsule(p, p0, p1, radius),
+        CuboidFrame => sdf::cuboid_frame(p, dim, dim2),
+        CuboidFrameRadial => sdf::cuboid_frame_radial(p, dim, dim2.x),
+        Capsule => sdf::capsule(p, p0, p1, dim.x),
         Torus => sdf::torus(p, dim.xy()),
     };
 
