@@ -1,4 +1,4 @@
-#![cfg_attr(target_arch = "spirv", no_std, feature(lang_items))]
+#![cfg_attr(target_arch = "spirv", no_std)]
 #![feature(variant_count)]
 
 pub mod complex;

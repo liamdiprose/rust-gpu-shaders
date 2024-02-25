@@ -1,6 +1,6 @@
 use crate::saturate;
 use crate::tuple::*;
-use spirv_std::glam::{vec2, vec3, Vec2, Vec3, Vec3Swizzles};
+use spirv_std::glam::{vec2, vec3, Vec2, Vec3};
 use spirv_std::num_traits::Float;
 
 pub mod ops;
@@ -14,8 +14,13 @@ pub fn sphere(p: Vec3, r: f32) -> f32 {
     p.length() - r
 }
 
-pub fn torus(p: Vec3, r: Vec2) -> f32 {
-    vec2(p.xz().length() - r.x, p.y).length() - r.y
+pub fn torus(p: Vec3, r: Vec2, d: Vec3) -> f32 {
+    vec2(p.cross(d).length() - r.x, p.dot(d)).length() - r.y
+}
+
+pub fn circle(p: Vec3, r: f32, d: Vec3) -> f32 {
+    let v = vec2(p.cross(d).length() - r, p.dot(d).abs());
+    v.max(Vec2::ZERO).length() + v.max_element().min(0.0)
 }
 
 pub fn tetrahedron(p: Vec3, r: f32) -> f32 {

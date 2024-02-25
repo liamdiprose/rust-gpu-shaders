@@ -24,7 +24,7 @@ fn sdf(p: Vec3, time: f32) -> f32 {
             sdf::ops::repeat_xz(p - vec3(0.0, -2.0, 0.0), vec2(1.0, 1.0)),
             0.5 + 0.2 * time.sin()
         ),
-        sdf::torus(p - vec3(2.0, 1.0, 0.0), vec2(0.6, 0.2)),
+        sdf::torus(p - vec3(2.0, 1.0, 0.0), vec2(0.6, 0.2), Vec3::Y),
         sdf::cuboid(p - vec3(-2.0, 1.0, 0.0), vec3(0.5, 0.3, 0.4)),
         sdf::tetrahedron(p - vec3(4.0, 1.0, 0.0), 0.5),
         sdf::capsule(p, vec3(-5.0, 1.0, 0.0), vec3(-4.0, 1.0, 0.0), 0.5),

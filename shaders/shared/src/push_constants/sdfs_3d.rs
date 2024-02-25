@@ -1,7 +1,6 @@
 use super::{Size, Vec2, Vec3};
 use crate::fast_optional::Optional_f32;
 use bytemuck::{Pod, Zeroable};
-use core::ops::RangeInclusive;
 
 #[cfg_attr(not(target_arch = "spirv"), derive(strum::EnumIter, strum::Display))]
 #[derive(PartialEq, Copy, Clone)]
@@ -13,6 +12,7 @@ pub enum Shape {
     CuboidFrameRadial,
     Capsule,
     Torus,
+    Circle,
 }
 
 impl Shape {
@@ -40,6 +40,7 @@ impl Shape {
             CuboidFrameRadial => &[W, H, L, R],
             Capsule => &[R],
             Torus => &[R, "Inner Radius"],
+            Circle => &[R],
         }
     }
 
@@ -59,7 +60,7 @@ impl Shape {
         Params { dims, ps }
     }
 
-    pub fn dim_range(&self) -> &[RangeInclusive<f32>] {
+    pub fn dim_range(&self) -> &[core::ops::RangeInclusive<f32>] {
         use Shape::*;
         match self {
             Sphere => &[0.0..=0.5],
@@ -75,6 +76,7 @@ impl Shape {
             CuboidFrameRadial => &[0.0..=0.5, 0.0..=0.5, 0.0..=0.5, 0.0..=0.1],
             Capsule => &[0.0..=0.5],
             Torus => &[0.0..=0.5, 0.0..=0.5],
+            Circle => &[0.0..=0.5],
         }
     }
 
@@ -87,6 +89,7 @@ impl Shape {
             CuboidFrameRadial => &[0.4, 0.3, 0.4, 0.02],
             Capsule => &[0.2],
             Torus => &[0.2, 0.1],
+            Circle => &[0.2],
         }
     }
 
@@ -139,6 +142,7 @@ pub fn sdf_shape(
     let dim2 = glam::vec3(params.dims[3], params.dims[4], params.dims[5]);
     let p0 = params.ps[0].into();
     let p1 = params.ps[1].into();
+    let orientation = glam::Vec3::Y;
 
     let mut d = match shape {
         Sphere => sdf::sphere(p, dim.x),
@@ -146,7 +150,8 @@ pub fn sdf_shape(
         CuboidFrame => sdf::cuboid_frame(p, dim, dim2),
         CuboidFrameRadial => sdf::cuboid_frame_radial(p, dim, dim2.x),
         Capsule => sdf::capsule(p, p0, p1, dim.x),
-        Torus => sdf::torus(p, dim.xy()),
+        Torus => sdf::torus(p, dim.xy(), orientation),
+        Circle => sdf::circle(p, dim.x, orientation),
     };
 
     if onion.has_value() {
