@@ -1,8 +1,7 @@
-use crate::model::Vertex;
-use crate::window::UserEvent;
+use crate::{camera::RotationCamera, model::Vertex, window::UserEvent};
 use bytemuck::Zeroable;
 use egui::{Color32, Context, Rect, RichText, Sense, Stroke, Ui};
-use glam::{vec2, vec3, Quat, Vec2, Vec3, Vec3Swizzles};
+use glam::{vec2, vec3, Vec2};
 use shared::{
     push_constants::spherical_harmonics_shape::{ShaderConstants, Variant},
     spherical_harmonics::*,
@@ -23,11 +22,10 @@ pub struct Controller {
     start: Instant,
     cursor: Vec2,
     last_cursor: Vec2,
-    rot: Quat,
     mouse_button_pressed: bool,
     shader_constants: ShaderConstants,
     buffers: (Vec<Vertex>, Vec<u32>),
-    camera: crate::camera::Camera,
+    camera: RotationCamera,
     l: u32,
     m: i32,
     variant: Variant,
@@ -46,19 +44,10 @@ impl crate::controller::Controller for Controller {
             start: Instant::now(),
             cursor: Vec2::ZERO,
             last_cursor: Vec2::ZERO,
-            rot: Quat::IDENTITY,
             mouse_button_pressed: false,
             shader_constants: ShaderConstants::zeroed(),
             buffers: create_buffers(m, l, variant),
-            camera: crate::camera::Camera {
-                eye: Vec3::Z * 2.0,
-                target: Vec3::ZERO,
-                up: Vec3::Y,
-                aspect: size.width as f32 / size.height as f32,
-                fovy: 45.0,
-                znear: 0.1,
-                zfar: 100.0,
-            },
+            camera: RotationCamera::new(size.width as f32 / size.height as f32, 2.0),
             l,
             m,
             variant,
@@ -79,20 +68,14 @@ impl crate::controller::Controller for Controller {
     fn mouse_move(&mut self, position: PhysicalPosition<f64>) {
         self.cursor = vec2(position.x as f32, position.y as f32);
         if self.mouse_button_pressed {
-            let angles = PI * (self.cursor - self.last_cursor) / self.size.height as f32;
-            let e = self.camera.eye.abs();
-            let p = vec3(
-                angles.y * (e.y + e.z),
-                angles.x * (e.x + e.z),
-                angles.dot(e.yx()),
-            );
-            self.rot = Quat::from_scaled_axis(p).mul_quat(self.rot).normalize();
+            let translate = (self.cursor - self.last_cursor) / self.size.height as f32;
+            self.camera.rotate(translate);
         }
         self.last_cursor = self.cursor;
     }
 
     fn mouse_scroll(&mut self, delta: MouseScrollDelta) {
-        let scroll = match delta {
+        let zoom = match delta {
             MouseScrollDelta::LineDelta(_, y) => {
                 let v = 1.0 + 0.1 * y.abs();
                 if y < 0.0 {
@@ -110,17 +93,16 @@ impl crate::controller::Controller for Controller {
                 }
             }
         };
-        self.camera.eye *= scroll;
+        self.camera.zoom(zoom);
     }
 
     fn resize(&mut self, size: PhysicalSize<u32>) {
         self.size = size;
-        self.camera.aspect = size.width as f32 / size.height as f32;
+        self.camera.resize(size);
     }
 
     fn update(&mut self) {
         self.shader_constants = ShaderConstants {
-            rot: self.rot.into(),
             view_proj: self.camera.build_view_projection_matrix().into(),
         };
     }

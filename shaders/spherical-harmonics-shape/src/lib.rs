@@ -2,7 +2,7 @@
 
 use push_constants::spherical_harmonics_shape::ShaderConstants;
 use shared::*;
-use spirv_std::glam::{Mat4, Quat, Vec3, Vec4};
+use spirv_std::glam::{Mat4, Vec3, Vec4};
 use spirv_std::spirv;
 
 #[spirv(fragment)]
@@ -23,9 +23,8 @@ pub fn main_vs(
     #[spirv(position, invariant)] out_pos: &mut Vec4,
     out_col: &mut Vec3,
 ) {
-    let rot: Quat = constants.rot.into();
     let view_proj: Mat4 = constants.view_proj.into();
 
-    *out_pos = view_proj * (rot * pos).extend(1.0);
+    *out_pos = view_proj * pos.extend(1.0);
     *out_col = col;
 }

@@ -1,4 +1,4 @@
-use super::{Mat4, Quat};
+use super::Mat4;
 use bytemuck::{Pod, Zeroable};
 
 #[cfg_attr(not(target_arch = "spirv"), derive(strum::EnumIter, strum::Display))]
@@ -12,7 +12,6 @@ pub enum Variant {
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
 pub struct ShaderConstants {
-    pub rot: Quat,
     pub view_proj: Mat4,
 }
 
