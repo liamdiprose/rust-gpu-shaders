@@ -21,8 +21,8 @@ pub fn ray_intersects_sphere(ro: Vec3, rd: Vec3, p: Vec3, r: f32) -> bool {
 }
 
 pub fn ray_intersect_box_frame(ro: Vec3, rd: Vec3, dim: Vec2) -> bool {
-    let e = vec2(dim.x, -dim.x);
-    let o = vec3(dim.y, -dim.y, 0.0);
+    let e = vec2(-dim.x, dim.x);
+    let o = vec3(-dim.y, dim.y, 0.0);
     ray_intersect_aabb(ro, rd, e.yyy(), e.yxy() + o.xzx())
         || ray_intersect_aabb(ro, rd, e.yyy(), e.xyy() + o.zxx())
         || ray_intersect_aabb(ro, rd, e.xxy(), e.yxy() + o.zyx())

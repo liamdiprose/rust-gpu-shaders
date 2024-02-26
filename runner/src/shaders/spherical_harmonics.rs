@@ -1,9 +1,9 @@
 use crate::window::UserEvent;
 use bytemuck::Zeroable;
 use egui::{Color32, Context, Rect, RichText, Sense, Stroke, Ui};
-use glam::{vec2, Quat, Vec2};
+use glam::{vec2, Quat, Vec2, Vec2Swizzles};
 use shared::push_constants::spherical_harmonics::{ShaderConstants, Variant};
-use std::{f32::consts::PI, time::Instant};
+use std::time::Instant;
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
     event::{ElementState, MouseButton, MouseScrollDelta},
@@ -14,9 +14,8 @@ pub struct Controller {
     size: PhysicalSize<u32>,
     start: Instant,
     cursor: Vec2,
-    drag_start: Vec2,
-    drag_end: Vec2,
-    quat: Quat,
+    last_cursor: Vec2,
+    rot: Quat,
     zoom: f32,
     mouse_button_pressed: bool,
     shader_constants: ShaderConstants,
@@ -33,9 +32,8 @@ impl crate::controller::Controller for Controller {
             size,
             start: Instant::now(),
             cursor: Vec2::ZERO,
-            drag_start: Vec2::ZERO,
-            drag_end: Vec2::ZERO,
-            quat: Quat::IDENTITY,
+            last_cursor: Vec2::ZERO,
+            rot: Quat::IDENTITY,
             zoom: 1.0,
             mouse_button_pressed: false,
             shader_constants: ShaderConstants::zeroed(),
@@ -51,27 +49,19 @@ impl crate::controller::Controller for Controller {
         if button == MouseButton::Left {
             self.mouse_button_pressed = match state {
                 ElementState::Pressed => true,
-                ElementState::Released => {
-                    let angles = PI * (self.drag_start - self.drag_end) / self.size.height as f32;
-                    self.quat = self
-                        .quat
-                        .mul_quat(Quat::from_rotation_y(-angles.x))
-                        .mul_quat(Quat::from_rotation_x(angles.y))
-                        .normalize();
-                    false
-                }
+                ElementState::Released => false,
             };
-
-            self.drag_start = self.cursor;
-            self.drag_end = self.cursor;
         }
     }
 
     fn mouse_move(&mut self, position: PhysicalPosition<f64>) {
         self.cursor = vec2(position.x as f32, position.y as f32);
         if self.mouse_button_pressed {
-            self.drag_end = self.cursor;
+            let translate = 4.0 * (self.last_cursor - self.cursor) / self.size.height as f32;
+            let p = self.rot * translate.yx().extend(0.0);
+            self.rot = (Quat::from_scaled_axis(p) * self.rot).normalize();
         }
+        self.last_cursor = self.cursor;
     }
 
     fn mouse_scroll(&mut self, delta: MouseScrollDelta) {
@@ -101,11 +91,6 @@ impl crate::controller::Controller for Controller {
     }
 
     fn update(&mut self) {
-        let angles = PI * (self.drag_start - self.drag_end) / self.size.height as f32;
-        let quat = self
-            .quat
-            .mul_quat(Quat::from_rotation_y(-angles.x))
-            .mul_quat(Quat::from_rotation_x(angles.y));
         self.shader_constants = ShaderConstants {
             size: self.size.into(),
             time: if self.include_time_factor {
@@ -113,12 +98,10 @@ impl crate::controller::Controller for Controller {
             } else {
                 0.0
             },
-            cursor: self.cursor.into(),
             zoom: self.zoom,
-            mouse_button_pressed: !(1 << self.mouse_button_pressed as u32),
             l: self.l,
             m: self.m,
-            quat: quat.into(),
+            rot: self.rot.into(),
             variant: self.variant as u32,
         };
     }

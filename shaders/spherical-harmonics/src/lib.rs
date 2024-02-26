@@ -1,6 +1,5 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
-use complex::Complex;
 use core::f32::consts::FRAC_1_SQRT_2;
 use push_constants::spherical_harmonics::{ShaderConstants, Variant};
 use shared::{ray_intersection::ray_intersect_box_frame, spherical_harmonics::*, *};
@@ -15,19 +14,13 @@ pub fn main_fs(
     #[spirv(push_constant)] constants: &ShaderConstants,
     output: &mut Vec4,
 ) {
-    let uv = (Complex::from(frag_coord.xy())
-        - 0.5 * Complex::new(constants.size.width as f32, constants.size.height as f32))
-        / constants.size.height as f32;
-    let rot: Quat = constants.quat.into();
+    let uv = from_pixels(frag_coord.xy(), constants.size);
+    let rot: Quat = constants.rot.into();
     let r = 0.3 / constants.zoom;
+    let z2 = r * r - uv.length_squared();
 
-    let col = if uv.length_squared() <= r * r {
-        let pos = {
-            let x = uv.x;
-            let y = uv.y;
-            let z = -(r * r - x * x - y * y).sqrt();
-            rot * uv.extend(z)
-        };
+    let col = if z2 > 0.0 {
+        let pos = rot * uv.extend(z2.sqrt());
         let (_, theta, phi) = to_spherical(pos);
         let m = constants.m;
         let l = constants.l;
