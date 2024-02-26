@@ -11,6 +11,7 @@ pub enum Shape {
     CuboidFrame,
     CuboidFrameRadial,
     Capsule,
+    Cylinder,
     Torus,
     Circle,
 }
@@ -39,6 +40,7 @@ impl Shape {
             CuboidFrame => &[W, H, L, "Inner Width", "Inner Height", "Inner Length"],
             CuboidFrameRadial => &[W, H, L, R],
             Capsule => &[R],
+            Cylinder => &[R],
             Torus => &[R, "Inner Radius"],
             Circle => &[R],
         }
@@ -75,6 +77,7 @@ impl Shape {
             ],
             CuboidFrameRadial => &[0.0..=0.5, 0.0..=0.5, 0.0..=0.5, 0.0..=0.1],
             Capsule => &[0.0..=0.5],
+            Cylinder => &[0.0..=0.5],
             Torus => &[0.0..=0.5, 0.0..=0.5],
             Circle => &[0.0..=0.5],
         }
@@ -88,6 +91,7 @@ impl Shape {
             CuboidFrame => &[0.4, 0.3, 0.4, 0.02, 0.02, 0.02],
             CuboidFrameRadial => &[0.4, 0.3, 0.4, 0.02],
             Capsule => &[0.2],
+            Cylinder => &[0.2],
             Torus => &[0.2, 0.1],
             Circle => &[0.2],
         }
@@ -97,6 +101,7 @@ impl Shape {
         use Shape::*;
         match self {
             Capsule => &[[0.0, 0.0, -0.1], [0.1, 0.1, 0.2]],
+            Cylinder => &[[0.0, 0.0, -0.3], [0.1, 0.1, 0.3]],
             _ => &[],
         }
     }
@@ -150,6 +155,7 @@ pub fn sdf_shape(
         CuboidFrame => sdf::cuboid_frame(p, dim, dim2),
         CuboidFrameRadial => sdf::cuboid_frame_radial(p, dim, dim2.x),
         Capsule => sdf::capsule(p, p0, p1, dim.x),
+        Cylinder => sdf::cylinder(p, p0, p1, dim.x),
         Torus => sdf::torus(p, dim.xy(), orientation),
         Circle => sdf::circle(p, dim.x, orientation),
     };
