@@ -2,7 +2,7 @@ use crate::egui_components::enabled_number::EnabledNumber;
 use crate::window::UserEvent;
 use bytemuck::Zeroable;
 use egui::{Context, CursorIcon};
-use glam::{vec2, Mat3, Vec2, Vec3, Vec3Swizzles};
+use glam::{vec2, DVec3, Mat3, Vec2, Vec3};
 use shared::{
     from_pixels,
     push_constants::sdfs_3d::{sdf_shape, sdf_slice, Params, ShaderConstants, Shape},
@@ -191,22 +191,22 @@ impl Controller {
                 break;
             }
         }
-        let mut p = (ro + rd * d0).xy().extend(self.slice_z);
-        let mut d = sdf_shape(
-            p,
-            self.shape,
-            self.params[self.shape as usize],
-            self.onion.into(),
-        );
-        while d > 1.0 {
-            p = (p.xy() + (-p.xy()).normalize() * (d - 1.0)).extend(self.slice_z);
+        let mut p: DVec3 = (ro + rd * d0).into();
+        p.z = self.slice_z as f64;
+        let mut d;
+        while {
             d = sdf_shape(
-                p,
+                p.as_vec3(),
                 self.shape,
                 self.params[self.shape as usize],
                 self.onion.into(),
-            );
+            )
+            .abs() as f64;
+            d > 1.0
+        } {
+            p = p - p.normalize() * (d - 1.0);
+            p.z = self.slice_z as f64;
         }
-        p
+        p.as_vec3()
     }
 }
