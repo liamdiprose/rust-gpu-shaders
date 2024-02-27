@@ -14,7 +14,7 @@ pub struct Controller {
     size: PhysicalSize<u32>,
     start: Instant,
     cursor: Vec2,
-    last_cursor: Vec2,
+    prev_cursor: Vec2,
     rot: Quat,
     zoom: f32,
     mouse_button_pressed: bool,
@@ -32,7 +32,7 @@ impl crate::controller::Controller for Controller {
             size,
             start: Instant::now(),
             cursor: Vec2::ZERO,
-            last_cursor: Vec2::ZERO,
+            prev_cursor: Vec2::ZERO,
             rot: Quat::IDENTITY,
             zoom: 1.0,
             mouse_button_pressed: false,
@@ -57,11 +57,11 @@ impl crate::controller::Controller for Controller {
     fn mouse_move(&mut self, position: PhysicalPosition<f64>) {
         self.cursor = vec2(position.x as f32, position.y as f32);
         if self.mouse_button_pressed {
-            let translate = 4.0 * (self.last_cursor - self.cursor) / self.size.height as f32;
+            let translate = 4.0 * (self.prev_cursor - self.cursor) / self.size.height as f32;
             let p = self.rot * translate.yx().extend(0.0);
             self.rot = (Quat::from_scaled_axis(p) * self.rot).normalize();
         }
-        self.last_cursor = self.cursor;
+        self.prev_cursor = self.cursor;
     }
 
     fn mouse_scroll(&mut self, delta: MouseScrollDelta) {

@@ -21,7 +21,7 @@ pub struct Controller {
     size: PhysicalSize<u32>,
     start: Instant,
     cursor: Vec2,
-    last_cursor: Vec2,
+    prev_cursor: Vec2,
     mouse_button_pressed: bool,
     shader_constants: ShaderConstants,
     buffers: (Vec<Vertex>, Vec<u32>),
@@ -43,7 +43,7 @@ impl crate::controller::Controller for Controller {
             size,
             start: Instant::now(),
             cursor: Vec2::ZERO,
-            last_cursor: Vec2::ZERO,
+            prev_cursor: Vec2::ZERO,
             mouse_button_pressed: false,
             shader_constants: ShaderConstants::zeroed(),
             buffers: create_buffers(m, l, variant),
@@ -68,10 +68,10 @@ impl crate::controller::Controller for Controller {
     fn mouse_move(&mut self, position: PhysicalPosition<f64>) {
         self.cursor = vec2(position.x as f32, position.y as f32);
         if self.mouse_button_pressed {
-            let translate = (self.cursor - self.last_cursor) / self.size.height as f32;
+            let translate = (self.cursor - self.prev_cursor) / self.size.height as f32;
             self.camera.rotate(translate);
         }
-        self.last_cursor = self.cursor;
+        self.prev_cursor = self.cursor;
     }
 
     fn mouse_scroll(&mut self, delta: MouseScrollDelta) {

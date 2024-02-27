@@ -8,10 +8,7 @@ use shared::{
     push_constants::sdfs_3d::{sdf_shape, sdf_slice, Params, ShaderConstants, Shape},
     ray_intersection::ray_intersects_sphere,
 };
-use std::{
-    f32::consts::PI,
-    time::{Duration, Instant},
-};
+use std::{f32::consts::PI, time::Instant};
 use strum::IntoEnumIterator;
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
@@ -22,7 +19,6 @@ use winit::{
 pub struct Controller {
     size: PhysicalSize<u32>,
     start: Instant,
-    elapsed: Duration,
     mouse_button_pressed: u32,
     cursor: Vec2,
     prev_cursor: Vec2,
@@ -33,7 +29,6 @@ pub struct Controller {
     shader_constants: ShaderConstants,
     camera: Vec2,
     slice_z: f32,
-    cursor_3d_pos: Vec3,
     onion: EnabledNumber,
 }
 
@@ -42,7 +37,6 @@ impl crate::controller::Controller for Controller {
         Self {
             size,
             start: Instant::now(),
-            elapsed: Duration::ZERO,
             cursor: Vec2::ZERO,
             prev_cursor: Vec2::ZERO,
             mouse_button_pressed: 0,
@@ -53,7 +47,6 @@ impl crate::controller::Controller for Controller {
             shader_constants: ShaderConstants::zeroed(),
             camera: vec2(0.2, 0.7),
             slice_z: 0.0,
-            cursor_3d_pos: Vec3::ZERO,
             onion: EnabledNumber::new(0.05, false),
         }
     }
@@ -100,7 +93,7 @@ impl crate::controller::Controller for Controller {
                 .normalize();
             self.can_drag = self.params[self.shape as usize].ps[0..num_points as usize]
                 .iter()
-                .position(|p| ray_intersects_sphere(ro, rd, (*p).into(), 0.05));
+                .position(|p| ray_intersects_sphere(ro, rd, (*p).into(), 0.03));
         }
         if self.mouse_button_pressed & (1 << 2) != 0 {
             self.camera += PI * (self.cursor - self.prev_cursor) / self.size.height as f32;
@@ -118,62 +111,19 @@ impl crate::controller::Controller for Controller {
     }
 
     fn resize(&mut self, size: PhysicalSize<u32>) {
-        self.size.width = size.width;
-        self.size.height = size.height;
+        self.size = size;
     }
 
     fn update(&mut self) {
-        self.elapsed = self.start.elapsed();
-
-        const MAX_STEPS: u32 = 100;
-        const MAX_DIST: f32 = 100.0;
-        const SURF_DIST: f32 = 0.0001;
-        // TODO: probably an analytical solution for this
-        self.cursor_3d_pos = {
-            let cursor = from_pixels(self.cursor, self.size.into());
-            let translate = self.camera;
-            let rm =
-                Mat3::from_rotation_y(translate.x).mul_mat3(&Mat3::from_rotation_x(translate.y));
-            let ro = rm.mul_vec3(-Vec3::Z);
-            let rd = rm.mul_vec3(cursor.extend(1.0)).normalize();
-            let mut d0 = 0.0;
-
-            for _ in 0..MAX_STEPS {
-                let p = ro + rd * d0;
-                let ds = sdf_slice(p, self.slice_z).abs();
-                d0 += ds;
-                if d0 > MAX_DIST {
-                    break;
-                }
-                if ds < SURF_DIST {
-                    break;
-                }
-            }
-            let mut p = (ro + rd * d0).xy().extend(self.slice_z);
-
-            let mut d = sdf_shape(
-                p,
-                self.shape,
-                self.params[self.shape as usize],
-                self.onion.into(),
-            );
-            while d > 1.0 {
-                p = (p.xy() + (-p.xy()).normalize() * (d - 1.0)).extend(self.slice_z);
-                d = sdf_shape(
-                    p,
-                    self.shape,
-                    self.params[self.shape as usize],
-                    self.onion.into(),
-                );
-            }
-
-            p
+        let cursor_3d_pos = if self.mouse_button_pressed & 1 == 1 {
+            self.get_cursor_slice_pos()
+        } else {
+            Vec3::ZERO
         };
-
         self.shader_constants = ShaderConstants {
             size: self.size.into(),
-            time: self.elapsed.as_secs_f32(),
-            cursor: self.cursor_3d_pos.into(),
+            time: self.start.elapsed().as_secs_f32(),
+            cursor: cursor_3d_pos.into(),
             mouse_button_pressed: if self.drag_point.is_some() {
                 self.mouse_button_pressed & !1
             } else {
@@ -222,5 +172,41 @@ impl crate::controller::Controller for Controller {
                 );
             });
         }
+    }
+}
+
+impl Controller {
+    fn get_cursor_slice_pos(&self) -> Vec3 {
+        let cursor = from_pixels(self.cursor, self.size.into());
+        let translate = self.camera;
+        let rm = Mat3::from_rotation_y(translate.x).mul_mat3(&Mat3::from_rotation_x(translate.y));
+        let ro = rm.mul_vec3(-Vec3::Z);
+        let rd = rm.mul_vec3(cursor.extend(1.0)).normalize();
+        let mut d0 = 0.0;
+        for _ in 0..100 {
+            let p = ro + rd * d0;
+            let ds = sdf_slice(p, self.slice_z).abs();
+            d0 += ds;
+            if d0 > 200.0 || ds < 0.000001 {
+                break;
+            }
+        }
+        let mut p = (ro + rd * d0).xy().extend(self.slice_z);
+        let mut d = sdf_shape(
+            p,
+            self.shape,
+            self.params[self.shape as usize],
+            self.onion.into(),
+        );
+        while d > 1.0 {
+            p = (p.xy() + (-p.xy()).normalize() * (d - 1.0)).extend(self.slice_z);
+            d = sdf_shape(
+                p,
+                self.shape,
+                self.params[self.shape as usize],
+                self.onion.into(),
+            );
+        }
+        p
     }
 }
