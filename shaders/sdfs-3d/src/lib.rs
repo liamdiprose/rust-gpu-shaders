@@ -138,8 +138,7 @@ pub fn main_fs(
     let shape = Shape::from_u32(constants.shape);
     let onion = constants.onion;
     let slice_d = get_d_to_shape_at_slice(ro, rd, shape, slice_z, constants.params, onion);
-    let cursor_d = sdf_shape(cursor, shape, constants.params, onion).abs();
-    let cursor_d2 = sdf_shape(cursor, shape, constants.params, onion);
+    let cursor_d = sdf_shape(cursor, shape, constants.params, onion);
     let (d0, ray_march_result) = ray_march(
         ro,
         rd,
@@ -147,12 +146,12 @@ pub fn main_fs(
         slice_z,
         constants.params,
         cursor,
-        cursor_d,
+        cursor_d.abs(),
         mouse_pressed,
         onion,
     );
     let d1 = if mouse_pressed {
-        ray_march_distance_texture(ro, rd, slice_z, cursor, cursor_d)
+        ray_march_distance_texture(ro, rd, slice_z, cursor, cursor_d.abs())
     } else {
         MAX_DIST
     };
@@ -165,11 +164,11 @@ pub fn main_fs(
     } else {
         let d_to_cursor = get_d_to_cursor_at_slice(ro, rd, slice_z, cursor);
         let sphere_surface_col = YELLOW
-            * ((ro.z + rd.z * d1 - cursor.z) * 30.0 / cursor_d.sqrt())
+            * ((ro.z + rd.z * d1 - cursor.z) * 30.0 / cursor_d.abs().sqrt())
                 .sin()
                 .abs();
         let sphere_intersection_col = YELLOW * (d_to_cursor * PI * 4.0 / cursor_d).sin().abs();
-        let sphere_surface_only = !(mouse_pressed && d_to_cursor < cursor_d);
+        let sphere_surface_only = !(mouse_pressed && d_to_cursor < cursor_d.abs());
         sphere_surface_col
             .lerp(
                 sphere_intersection_col,
@@ -192,24 +191,35 @@ pub fn main_fs(
     };
 
     let col = if (ray_march_result == RayMarchResult::DistanceTexture)
-        || (d1 < MAX_DIST && cursor_d2 < 0.0)
+        || (d1 < MAX_DIST && cursor_d < 0.0)
         || (ray_march_result == RayMarchResult::Shape && ro.z > slice_z && slice_d > 0.0)
     {
         col
-    } else if slice_d < 1.0 {
+    } else {
         let base = if slice_d < 0.0 { COL_INSIDE } else { col };
         let s = if slice_d < 0.0 && ro.z > slice_z {
             0.8
         } else {
             1.0
         };
+        let phase = if slice_d.abs() < 1.0 {
+            0.0
+        } else if slice_d > 0.0 {
+            PI / 2.0
+        } else {
+            PI
+        };
+        let angle = if slice_d.abs() < 1.0 {
+            slice_d
+        } else {
+            1.0 / slice_d
+        };
         col.lerp(
-            (base * (1.0 - (-6.0 * slice_d.abs()).exp())) * (0.8 + 0.2 * (150.0 * slice_d).cos()),
+            (base * (1.0 - (-6.0 * slice_d.abs()).exp()))
+                * (0.8 + 0.2 * (150.0 * angle + phase).cos()),
             s,
         )
         .lerp(Vec3::ONE, 1.0 - smoothstep(0.0, 0.005, slice_d.abs()))
-    } else {
-        col * 0.8
     };
 
     *output = col.extend(1.0);
