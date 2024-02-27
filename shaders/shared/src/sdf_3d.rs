@@ -5,22 +5,24 @@ use spirv_std::num_traits::Float;
 
 pub mod ops;
 
-/// n must be normalized or else it will scale space
+// `n` must be normalized
 pub fn plane(p: Vec3, n: Vec3) -> f32 {
     p.dot(n)
 }
 
+// `n` must be normalized
+pub fn torus(p: Vec3, r: Vec2, n: Vec3) -> f32 {
+    vec2(p.cross(n).length() - r.x, p.dot(n)).length() - r.y
+}
+
+// `n` must be normalized
+pub fn disk(p: Vec3, r: Vec2, n: Vec3) -> f32 {
+    let v = vec2(p.cross(n).length() - r.x, p.dot(n).abs());
+    v.max(Vec2::ZERO).length() + v.max_element().min(0.0) - r.y
+}
+
 pub fn sphere(p: Vec3, r: f32) -> f32 {
     p.length() - r
-}
-
-pub fn torus(p: Vec3, r: Vec2, d: Vec3) -> f32 {
-    vec2(p.cross(d).length() - r.x, p.dot(d)).length() - r.y
-}
-
-pub fn circle(p: Vec3, r: f32, d: Vec3) -> f32 {
-    let v = vec2(p.cross(d).length() - r, p.dot(d).abs());
-    v.max(Vec2::ZERO).length() + v.max_element().min(0.0)
 }
 
 pub fn tetrahedron(p: Vec3, r: f32) -> f32 {
@@ -35,8 +37,7 @@ pub fn line_segment(p: Vec3, a: Vec3, b: Vec3) -> f32 {
     let ap = p - a;
     let ab = b - a;
     let t = saturate(ap.dot(ab) / ab.length_squared());
-    let c = a + t * ab;
-    p.distance(c)
+    p.distance(a + t * ab)
 }
 
 pub fn capsule(p: Vec3, a: Vec3, b: Vec3, r: f32) -> f32 {
@@ -47,8 +48,7 @@ pub fn cylinder(p: Vec3, a: Vec3, b: Vec3, r: f32) -> f32 {
     let ap = p - a;
     let ab = b - a;
     let t = ap.dot(ab) / ab.length_squared();
-    let c = a + t * ab;
-    let x = p.distance(c) - r;
+    let x = p.distance(a + t * ab) - r;
     let y = ((t - 0.5).abs() - 0.5) * ab.length();
     let e = vec2(x, y).max(Vec2::ZERO).length();
     let i = x.max(y).min(0.0);

@@ -13,7 +13,7 @@ pub enum Shape {
     Capsule,
     Cylinder,
     Torus,
-    Circle,
+    Disk,
 }
 
 impl Shape {
@@ -35,14 +35,11 @@ impl Shape {
         const H: &'static str = "Height";
         const L: &'static str = "length";
         match self {
-            Sphere => &[R],
+            Sphere | Capsule | Cylinder => &[R],
             Cuboid => &[W, H, L],
             CuboidFrame => &[W, H, L, "Inner Width", "Inner Height", "Inner Length"],
             CuboidFrameRadial => &[W, H, L, R],
-            Capsule => &[R],
-            Cylinder => &[R],
-            Torus => &[R, "Inner Radius"],
-            Circle => &[R],
+            Torus | Disk => &["Major Radius", "Minor Radius"],
         }
     }
 
@@ -79,7 +76,7 @@ impl Shape {
             Capsule => &[0.0..=0.5],
             Cylinder => &[0.0..=0.5],
             Torus => &[0.0..=0.5, 0.0..=0.5],
-            Circle => &[0.0..=0.5],
+            Disk => &[0.0..=0.5, 0.0..=0.5],
         }
     }
 
@@ -93,7 +90,7 @@ impl Shape {
             Capsule => &[0.2],
             Cylinder => &[0.2],
             Torus => &[0.2, 0.1],
-            Circle => &[0.2],
+            Disk => &[0.2, 0.02],
         }
     }
 
@@ -157,7 +154,7 @@ pub fn sdf_shape(
         Capsule => sdf::capsule(p, p0, p1, dim.x),
         Cylinder => sdf::cylinder(p, p0, p1, dim.x),
         Torus => sdf::torus(p, dim.xy(), orientation),
-        Circle => sdf::circle(p, dim.x, orientation),
+        Disk => sdf::disk(p, dim.xy(), orientation),
     };
 
     if onion.has_value() {

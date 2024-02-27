@@ -6,7 +6,7 @@ use spirv_std::num_traits::Float;
 
 pub mod ops;
 
-pub fn circle(p: Vec2, r: f32) -> f32 {
+pub fn disk(p: Vec2, r: f32) -> f32 {
     p.length() - r
 }
 
