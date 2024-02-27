@@ -14,6 +14,7 @@ pub enum Shape {
     Cylinder,
     Torus,
     Disk,
+    Plane,
 }
 
 impl Shape {
@@ -40,6 +41,7 @@ impl Shape {
             CuboidFrame => &[W, H, L, "Inner Width", "Inner Height", "Inner Length"],
             CuboidFrameRadial => &[W, H, L, R],
             Torus | Disk => &["Major Radius", "Minor Radius"],
+            Plane => &[],
         }
     }
 
@@ -77,6 +79,7 @@ impl Shape {
             Cylinder => &[0.0..=0.5],
             Torus => &[0.0..=0.5, 0.0..=0.5],
             Disk => &[0.0..=0.5, 0.0..=0.5],
+            Plane => &[],
         }
     }
 
@@ -91,6 +94,7 @@ impl Shape {
             Cylinder => &[0.2],
             Torus => &[0.2, 0.1],
             Disk => &[0.2, 0.02],
+            Plane => &[],
         }
     }
 
@@ -155,6 +159,7 @@ pub fn sdf_shape(
         Cylinder => sdf::cylinder(p, p0, p1, dim.x),
         Torus => sdf::torus(p, dim.xy(), orientation),
         Disk => sdf::disk(p, dim.xy(), orientation),
+        Plane => sdf::plane(p, orientation),
     };
 
     if onion.has_value() {
