@@ -140,16 +140,7 @@ impl crate::controller::Controller for Controller {
             slice_z: self.slice_z,
             translate: self.camera.into(),
             shape: self.shape as u32,
-            params: Params {
-                onion: self.onion.into(),
-                pad: self.pad.into(),
-                repeat: [
-                    self.repeat_x.into(),
-                    self.repeat_y.into(),
-                    self.repeat_z.into(),
-                ],
-                ..self.params[self.shape as usize]
-            },
+            params: self.params(),
         };
     }
 
@@ -198,6 +189,19 @@ impl crate::controller::Controller for Controller {
 }
 
 impl Controller {
+    fn params(&self) -> Params {
+        Params {
+            onion: self.onion.into(),
+            pad: self.pad.into(),
+            repeat: [
+                self.repeat_x.into(),
+                self.repeat_y.into(),
+                self.repeat_z.into(),
+            ],
+            ..self.params[self.shape as usize]
+        }
+    }
+
     fn get_cursor_slice_pos(&self) -> Vec3 {
         let cursor = from_pixels(self.cursor, self.size.into());
         let translate = self.camera;
@@ -217,7 +221,7 @@ impl Controller {
         p.z = self.slice_z as f64;
         let mut d;
         while {
-            d = sdf_shape(p.as_vec3(), self.shape, self.params[self.shape as usize]).abs() as f64;
+            d = sdf_shape(p.as_vec3(), self.shape, self.params()).abs() as f64;
             d > 1.0
         } {
             p = p - p.normalize() * (d - 1.0);
