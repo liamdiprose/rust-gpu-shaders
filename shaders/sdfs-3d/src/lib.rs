@@ -24,9 +24,9 @@ const COL_INSIDE: Vec3 = vec3(0.65, 0.85, 1.0);
 const COL_OUTSIDE: Vec3 = vec3(0.9, 0.6, 0.3);
 const YELLOW: Vec3 = vec3(1.0, 1.0, 0.0);
 
-const MAX_STEPS: u32 = 100;
+const MAX_STEPS: u32 = 512;
 const MAX_DIST: f32 = 100.0;
-const SURF_DIST: f32 = 0.0001;
+const SURF_DIST: f32 = 0.0002;
 
 fn sdf_ball(p: Vec3, cursor: Vec3, cursor_d: f32) -> f32 {
     sdf::sphere(p - cursor, cursor_d)
@@ -43,33 +43,46 @@ fn ray_march(
     mouse_pressed: bool,
     onion: Optional_f32,
 ) -> (f32, RayMarchResult) {
+    use RayMarchResult::*;
     let mut d0 = 0.0;
-    let mut result = RayMarchResult::Divergent;
 
     for _ in 0..MAX_STEPS {
         let p = ro + rd * d0;
         let slice_d = sdf_slice(p, slice_z);
         let sliced_shape_d = ops::difference(sdf_shape(p, shape, params, onion), slice_d);
-        let sliced_ball_d = ops::difference(sdf_ball(p, cursor, cursor_d), slice_d);
-        let mut ds = sliced_shape_d;
-        if mouse_pressed {
-            ds = ds.min(sliced_ball_d)
-        }
+        let ds = if mouse_pressed {
+            let sliced_ball_d = ops::difference(sdf_ball(p, cursor, cursor_d), slice_d);
+            sliced_shape_d.min(sliced_ball_d)
+        } else {
+            sliced_shape_d
+        };
         d0 += ds;
         if ds < SURF_DIST {
-            result = if mouse_pressed && ds == sliced_ball_d {
-                RayMarchResult::DistanceTexture
-            } else {
-                RayMarchResult::Shape
-            };
-            break;
+            let sliced_ball_d = ops::difference(sdf_ball(p, cursor, cursor_d), slice_d);
+            return (
+                d0,
+                if mouse_pressed && ds == sliced_ball_d {
+                    DistanceTexture
+                } else {
+                    Shape
+                },
+            );
         }
         if d0 > MAX_DIST {
-            break;
+            return (d0, Divergent);
         }
     }
 
-    (d0, result)
+    let p = ro + rd * 1e15;
+    let sliced_shape_d = ops::difference(sdf_shape(p, shape, params, onion), sdf_slice(p, slice_z));
+    (
+        d0,
+        if sliced_shape_d < 0.0 {
+            Shape
+        } else {
+            Divergent
+        },
+    )
 }
 
 fn ray_march_distance_texture(
@@ -103,7 +116,7 @@ fn get_d_to_shape_at_slice(
 ) -> f32 {
     let x = (slice_z - ro.z) / rd.z;
     if x < 0.0 {
-        MAX_DIST
+        MAX_DIST * 8.0 // Makes a nice color
     } else {
         sdf_shape(ro + rd * x, shape, params, onion)
     }
@@ -137,7 +150,6 @@ pub fn main_fs(
     let mouse_pressed = constants.mouse_button_pressed & 1 != 0;
     let shape = Shape::from_u32(constants.shape);
     let onion = constants.onion;
-    let slice_d = get_d_to_shape_at_slice(ro, rd, shape, slice_z, constants.params, onion);
     let cursor_d = sdf_shape(cursor, shape, constants.params, onion);
     let (d0, ray_march_result) = ray_march(
         ro,
@@ -155,9 +167,10 @@ pub fn main_fs(
     } else {
         MAX_DIST
     };
-    let shape_col = Vec3::splat((ro + rd * d0).map(|x| (x * 50.0).sin().abs()).sum() * 0.3);
+    let shape_col =
+        Vec3::splat((ro + rd * d0).map(|x| (x * 50.0).sin().abs()).sum() * 0.3) / d0.max(1.0);
 
-    let col = if d0 >= MAX_DIST {
+    let col = if ray_march_result == RayMarchResult::Divergent {
         COL_OUTSIDE
     } else if d1 >= MAX_DIST {
         shape_col
@@ -189,6 +202,8 @@ pub fn main_fs(
                 },
             )
     };
+
+    let slice_d = get_d_to_shape_at_slice(ro, rd, shape, slice_z, constants.params, onion);
 
     let col = if (ray_march_result == RayMarchResult::DistanceTexture)
         || (d1 < MAX_DIST && cursor_d < 0.0)
