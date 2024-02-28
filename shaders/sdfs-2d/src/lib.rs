@@ -19,7 +19,7 @@ fn sdf(p: Vec2, shape: u32, params: Params) -> f32 {
     let p = p.rotate(Vec2::from_angle(params.rot));
 
     match Shape::from_u32(shape) {
-        Circle => sdf::circle(p, radius),
+        Disk => sdf::disk(p, radius),
         Rectangle => sdf::rectangle(p, dim),
         EquilateralTriangle => sdf::equilateral_triangle(p, radius),
         IsoscelesTriangle => sdf::isosceles_triangle(p, dim),
@@ -62,14 +62,14 @@ pub fn main_fs(
             col = col
                 .lerp(
                     vec3(1.0, 1.0, 0.0),
-                    smoothstep(thickness, 0.0, sdf::circle(uv - cursor, 0.01)),
+                    smoothstep(thickness, 0.0, sdf::disk(uv - cursor, 0.01)),
                 )
                 .lerp(
                     vec3(1.0, 1.0, 0.0),
                     smoothstep(
                         thickness,
                         0.0,
-                        sdf::circle(uv - cursor, d.abs()).abs() - 0.0025,
+                        sdf::disk(uv - cursor, d.abs()).abs() - 0.0025,
                     ),
                 );
         }

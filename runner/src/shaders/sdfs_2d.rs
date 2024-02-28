@@ -38,7 +38,7 @@ impl crate::controller::Controller for Controller {
             mouse_button_pressed: false,
             can_drag: None,
             drag_point: None,
-            shape: Shape::Circle,
+            shape: Shape::Disk,
             params: Shape::iter().map(|shape| shape.params()).collect(),
             shader_constants: ShaderConstants::zeroed(),
         }

@@ -5,7 +5,7 @@ use bytemuck::{Pod, Zeroable};
 #[derive(PartialEq, Copy, Clone)]
 #[repr(u32)]
 pub enum Shape {
-    Circle,
+    Disk,
     Rectangle,
     EquilateralTriangle,
     IsoscelesTriangle,
@@ -23,7 +23,7 @@ pub enum Shape {
 impl Shape {
     pub fn from_u32(x: u32) -> Self {
         if x >= core::mem::variant_count::<Shape>() as u32 {
-            Shape::Circle
+            Shape::Disk
         } else {
             unsafe { core::mem::transmute(x) }
         }
@@ -32,7 +32,7 @@ impl Shape {
     pub fn spec(self) -> ShapeSpec {
         use Shape::*;
         match self {
-            Circle => ShapeSpec {
+            Disk => ShapeSpec {
                 num_dims: 1,
                 num_points: 0,
                 is_radial: true,

@@ -85,18 +85,14 @@ pub fn main_fs(
             )
             .lerp(
                 vec3(0.5, 0.6, 0.4),
-                smoothstep(
-                    1.0 / constants.height as f32,
-                    0.0,
-                    sdf::circle(uv - p, 0.006),
-                ),
+                smoothstep(1.0 / constants.height as f32, 0.0, sdf::disk(uv - p, 0.006)),
             )
             .lerp(
                 vec3(0.2, 0.4, 0.1),
                 smoothstep(
                     2.0 / constants.height as f32,
                     0.0,
-                    sdf::circle(uv - p, ds).abs(),
+                    sdf::disk(uv - p, ds).abs(),
                 ),
             );
         d0 += ds;
