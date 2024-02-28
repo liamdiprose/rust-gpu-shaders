@@ -1,30 +1,6 @@
-pub use tuple::Map;
+pub use crate::functional::traits::*;
 use core::ops::*;
-
-pub trait MinElement {
-    type Output;
-    fn min_element(self) -> Self::Output;
-}
-
-pub trait MaxElement {
-    type Output;
-    fn max_element(self) -> Self::Output;
-}
-
-pub trait Sum {
-    type Output;
-    fn sum(self) -> Self::Output;
-}
-
-pub trait Product {
-    type Output;
-    fn product(self) -> Self::Output;
-}
-
-pub trait Zip {
-    type Output;
-    fn zip(self, other: Self) -> Self::Output;
-}
+pub use tuple::Map;
 
 macro_rules! replace_expr {
     ($_:tt $sub:tt) => {
@@ -80,15 +56,8 @@ macro_rules! tuple_impls {
     };
 }
 
-tuple_impls! { 0 }
 tuple_impls! { 0 1 }
 tuple_impls! { 0 1 2 }
 tuple_impls! { 0 1 2 3 }
 tuple_impls! { 0 1 2 3 4 }
 tuple_impls! { 0 1 2 3 4 5 }
-tuple_impls! { 0 1 2 3 4 5 6 }
-tuple_impls! { 0 1 2 3 4 5 6 7 }
-tuple_impls! { 0 1 2 3 4 5 6 7 8 }
-tuple_impls! { 0 1 2 3 4 5 6 7 8 9 }
-tuple_impls! { 0 1 2 3 4 5 6 7 8 9 10 }
-tuple_impls! { 0 1 2 3 4 5 6 7 8 9 10 11 }

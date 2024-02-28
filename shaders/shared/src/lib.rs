@@ -1,18 +1,17 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 #![feature(variant_count)]
 
+pub mod assert;
 pub mod complex;
+pub mod fast_optional;
+pub mod functional;
+pub mod numeric_integration;
 pub mod push_constants;
 pub mod random;
+pub mod ray_intersection;
 pub mod sdf_2d;
 pub mod sdf_3d;
 pub mod spherical_harmonics;
-pub mod tuple;
-pub mod assert;
-pub mod numeric_integration;
-pub mod fast_optional;
-pub mod vec_functional;
-pub mod ray_intersection;
 
 use push_constants::Size;
 use spirv_std::glam::{vec2, Vec2, Vec4};

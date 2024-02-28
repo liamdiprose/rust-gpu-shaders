@@ -1,6 +1,6 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
-use crate::vec_functional::*;
+use crate::functional::vec::*;
 use shared::{
     fast_optional::Optional_f32,
     push_constants::sdfs_3d::{sdf_shape, sdf_slice, Params, ShaderConstants, Shape},

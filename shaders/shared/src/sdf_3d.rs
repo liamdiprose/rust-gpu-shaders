@@ -1,5 +1,5 @@
 use crate::saturate;
-use crate::tuple::*;
+use crate::functional::tuple::*;
 use spirv_std::glam::{vec2, vec3, Vec2, Vec3};
 use spirv_std::num_traits::Float;
 

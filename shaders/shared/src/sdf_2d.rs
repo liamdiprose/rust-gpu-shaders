@@ -1,4 +1,4 @@
-use crate::tuple::{Map, MinElement, Zip};
+use crate::functional::tuple::*;
 use crate::{saturate, PI};
 use spirv_std::glam::{vec2, BVec3, Vec2};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
