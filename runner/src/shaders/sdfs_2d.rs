@@ -27,6 +27,8 @@ pub struct Controller {
     shader_constants: ShaderConstants,
     onion: EnabledNumber,
     pad: EnabledNumber,
+    repeat_x: EnabledNumber,
+    repeat_y: EnabledNumber,
 }
 
 impl crate::controller::Controller for Controller {
@@ -44,6 +46,8 @@ impl crate::controller::Controller for Controller {
             shader_constants: ShaderConstants::zeroed(),
             onion: EnabledNumber::new(0.05, false),
             pad: EnabledNumber::new(0.05, false),
+            repeat_x: EnabledNumber::new(0.5, false),
+            repeat_y: EnabledNumber::new(0.5, false),
         }
     }
 
@@ -109,6 +113,7 @@ impl crate::controller::Controller for Controller {
             params: Params {
                 onion: self.onion.into(),
                 pad: self.pad.into(),
+                repeat: [self.repeat_x.into(), self.repeat_y.into()],
                 ..self.params[self.shape as usize]
             },
         };
@@ -136,6 +141,8 @@ impl crate::controller::Controller for Controller {
         ui.separator();
         self.pad.ui(ui, "Pad", 0.0..=0.1, 0.01);
         self.onion.ui(ui, "Onion", 0.0..=0.1, 0.01);
+        self.repeat_x.ui(ui, "Repeat X", 0.01..=1.0, 0.01);
+        self.repeat_y.ui(ui, "Repeat Y", 0.01..=1.0, 0.01);
         let params = &mut self.params[self.shape as usize];
         let labels = self.shape.labels();
         if labels.len() > 0 {

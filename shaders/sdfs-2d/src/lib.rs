@@ -9,14 +9,22 @@ use spirv_std::glam::{vec3, Vec2, Vec3, Vec4, Vec4Swizzles};
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;
 
-fn sdf(p: Vec2, shape: u32, params: Params) -> f32 {
+fn sdf(mut p: Vec2, shape: u32, params: Params) -> f32 {
     use Shape::*;
     let dim: Vec2 = params.dims.into();
     let radius = dim.x;
     let p0: Vec2 = params.ps[0].into();
     let p1: Vec2 = params.ps[1].into();
     let p2: Vec2 = params.ps[2].into();
-    let p = p.rotate(Vec2::from_angle(params.rot));
+    p = p.rotate(Vec2::from_angle(params.rot));
+
+    if params.repeat[0].has_value() {
+        p = sdf::ops::repeat_x(p, params.repeat[0].value)
+    }
+
+    if params.repeat[1].has_value() {
+        p = sdf::ops::repeat_y(p, params.repeat[1].value)
+    }
 
     let mut d = match Shape::from_u32(shape) {
         Disk => sdf::disk(p, radius),

@@ -66,6 +66,7 @@ impl Shape {
             rot: 0.0,
             pad: Optional_f32::NONE,
             onion: Optional_f32::NONE,
+            repeat: [Optional_f32::NONE; 2],
         }
     }
 
@@ -94,7 +95,7 @@ impl Shape {
         match self {
             Triangle => &[[-0.1, -0.2], [0.3, 0.2], [0.2, -0.3]],
             Capsule | LineSegment | PlaneSegment => &[[-0.1, -0.1], [0.2, 0.1]],
-            Ray | PlaneRay => &[[0.0, -0.1]],
+            Ray | PlaneRay => &[[0.0, 0.0]],
             _ => &[],
         }
     }
@@ -114,6 +115,7 @@ pub struct Params {
     pub rot: f32,
     pub onion: Optional_f32,
     pub pad: Optional_f32,
+    pub repeat: [Optional_f32; 2],
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]
