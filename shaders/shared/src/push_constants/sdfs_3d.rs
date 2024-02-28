@@ -63,6 +63,7 @@ impl Shape {
             ps,
             onion: Optional_f32::NONE,
             pad: Optional_f32::NONE,
+            repeat: [Optional_f32::NONE; 3],
         }
     }
 
@@ -120,6 +121,7 @@ pub struct Params {
     pub ps: [[f32; 3]; 3],
     pub onion: Optional_f32,
     pub pad: Optional_f32,
+    pub repeat: [Optional_f32; 3],
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -140,7 +142,7 @@ pub struct ShaderConstants {
     pub params: Params,
 }
 
-pub fn sdf_shape(p: spirv_std::glam::Vec3, shape: Shape, params: Params) -> f32 {
+pub fn sdf_shape(mut p: spirv_std::glam::Vec3, shape: Shape, params: Params) -> f32 {
     use crate::sdf_3d as sdf;
     use spirv_std::glam::{self, Vec3Swizzles};
     use Shape::*;
@@ -150,6 +152,18 @@ pub fn sdf_shape(p: spirv_std::glam::Vec3, shape: Shape, params: Params) -> f32 
     let p0 = params.ps[0].into();
     let p1 = params.ps[1].into();
     let orientation = glam::Vec3::Y;
+
+    if params.repeat[0].has_value() {
+        p = sdf::ops::repeat_x(p, params.repeat[0].value)
+    }
+
+    if params.repeat[1].has_value() {
+        p = sdf::ops::repeat_y(p, params.repeat[1].value)
+    }
+
+    if params.repeat[2].has_value() {
+        p = sdf::ops::repeat_z(p, params.repeat[2].value)
+    }
 
     let mut d = match shape {
         Sphere => sdf::sphere(p, dim.x),
