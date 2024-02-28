@@ -11,7 +11,7 @@ use spirv_std::spirv;
 
 fn sdf(p: Vec2, shape: u32, params: Params) -> f32 {
     use Shape::*;
-    let dim: Vec2 = params.dim.into();
+    let dim: Vec2 = params.dims.into();
     let radius = dim.x;
     let p0: Vec2 = params.ps[0].into();
     let p1: Vec2 = params.ps[1].into();
@@ -26,9 +26,9 @@ fn sdf(p: Vec2, shape: u32, params: Params) -> f32 {
         Triangle => sdf::triangle(p, p0, p1, p2),
         Capsule => sdf::capsule(p, p0, p1, radius),
         Torus => sdf::torus(p, dim),
-        Line => sdf::line(p, Vec2::X),
-        Plane => sdf::plane(p, Vec2::X),
-        LineSegement => sdf::line_segment(p, p0, p1),
+        Line => sdf::line(p, Vec2::Y),
+        Plane => sdf::plane(p, Vec2::Y),
+        LineSegment => sdf::line_segment(p, p0, p1),
         PlaneSegment => sdf::plane_segment(p, p0, p1),
         Ray => sdf::ray(p - p0, Vec2::X),
         PlaneRay => sdf::plane_ray(p - p0, Vec2::X),

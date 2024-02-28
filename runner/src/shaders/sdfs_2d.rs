@@ -39,7 +39,7 @@ impl crate::controller::Controller for Controller {
             can_drag: None,
             drag_point: None,
             shape: Shape::Disk,
-            params: Shape::iter().map(|shape| shape.params()).collect(),
+            params: Shape::iter().map(|shape| shape.default_params()).collect(),
             shader_constants: ShaderConstants::zeroed(),
         }
     }
@@ -61,7 +61,7 @@ impl crate::controller::Controller for Controller {
 
     fn mouse_move(&mut self, position: PhysicalPosition<f64>) {
         self.cursor = vec2(position.x as f32, position.y as f32);
-        let num_points = self.shape.spec().num_points;
+        let num_points = self.shape.default_points().len();
         if let Some(i) = self.drag_point {
             self.params[self.shape as usize].ps[i] = rotate(
                 self.from_pixels(self.cursor),
@@ -91,8 +91,7 @@ impl crate::controller::Controller for Controller {
     }
 
     fn resize(&mut self, size: PhysicalSize<u32>) {
-        self.size.width = size.width;
-        self.size.height = size.height;
+        self.size = size
     }
 
     fn update(&mut self) {
@@ -127,39 +126,20 @@ impl crate::controller::Controller for Controller {
         for shape in Shape::iter() {
             ui.radio_value(&mut self.shape, shape, shape.to_string());
         }
-        let spec = self.shape.spec();
-        if spec.num_dims > 0 {
-            let params = &mut self.params[self.shape as usize];
-            let (dim1_max, dim2_max, dim1_label, dim2_label) = {
-                if spec.is_radial {
-                    (0.5, params.dim.x, "Radius", "Radius2")
-                } else {
-                    (
-                        self.shader_constants.size.aspect_ratio(),
-                        1.0,
-                        "Width",
-                        "Height",
-                    )
-                }
-            };
+        let params = &mut self.params[self.shape as usize];
+        let labels = self.shape.labels();
+        for i in 0..labels.len() {
+            let ranges = self.shape.dim_range();
+            let range = ranges[i].clone();
+            let speed = (range.end() - range.start()) * 0.02;
             ui.horizontal(|ui| {
-                ui.label(dim1_label);
+                ui.label(labels[i as usize]);
                 ui.add(
-                    egui::DragValue::new(&mut params.dim.x)
-                        .clamp_range(0.0..=dim1_max)
-                        .speed(0.01),
+                    egui::DragValue::new(&mut params.dims[i as usize])
+                        .clamp_range(range)
+                        .speed(speed),
                 );
             });
-            if spec.num_dims > 1 {
-                ui.horizontal(|ui| {
-                    ui.label(dim2_label);
-                    ui.add(
-                        egui::DragValue::new(&mut params.dim.y)
-                            .clamp_range(0.0..=dim2_max)
-                            .speed(0.01),
-                    );
-                });
-            }
         }
     }
 }

@@ -1,4 +1,4 @@
-use super::{vec2, Size, Vec2};
+use super::{Size, Vec2};
 use bytemuck::{Pod, Zeroable};
 
 #[cfg_attr(not(target_arch = "spirv"), derive(strum::EnumIter, strum::Display))]
@@ -14,7 +14,7 @@ pub enum Shape {
     Torus,
     Line,
     Plane,
-    LineSegement,
+    LineSegment,
     PlaneSegment,
     Ray,
     PlaneRay,
@@ -28,88 +28,67 @@ impl Shape {
             unsafe { core::mem::transmute(x) }
         }
     }
+}
 
-    pub fn spec(self) -> ShapeSpec {
+#[cfg(not(target_arch = "spirv"))]
+impl Shape {
+    pub fn labels(self) -> &'static [&'static str] {
         use Shape::*;
+        const R: &'static str = "Radius";
+        const W: &'static str = "Width";
+        const H: &'static str = "Height";
         match self {
-            Disk => ShapeSpec {
-                num_dims: 1,
-                num_points: 0,
-                is_radial: true,
-            },
-            Rectangle => ShapeSpec {
-                num_dims: 2,
-                num_points: 0,
-                is_radial: false,
-            },
-            EquilateralTriangle => ShapeSpec {
-                num_dims: 1,
-                num_points: 0,
-                is_radial: true,
-            },
-            IsoscelesTriangle => ShapeSpec {
-                num_dims: 2,
-                num_points: 0,
-                is_radial: false,
-            },
-            Triangle => ShapeSpec {
-                num_dims: 0,
-                num_points: 3,
-                is_radial: false,
-            },
-            Capsule => ShapeSpec {
-                num_dims: 1,
-                num_points: 2,
-                is_radial: true,
-            },
-            Torus => ShapeSpec {
-                num_dims: 2,
-                num_points: 0,
-                is_radial: true,
-            },
-            Plane => ShapeSpec {
-                num_dims: 0,
-                num_points: 0,
-                is_radial: false,
-            },
-            Line => ShapeSpec {
-                num_dims: 0,
-                num_points: 0,
-                is_radial: false,
-            },
-            PlaneSegment => ShapeSpec {
-                num_dims: 0,
-                num_points: 2,
-                is_radial: false,
-            },
-            LineSegement => ShapeSpec {
-                num_dims: 0,
-                num_points: 2,
-                is_radial: false,
-            },
-            Ray => ShapeSpec {
-                num_dims: 0,
-                num_points: 1,
-                is_radial: false,
-            },
-            PlaneRay => ShapeSpec {
-                num_dims: 0,
-                num_points: 1,
-                is_radial: false,
-            },
+            Disk | Capsule => &[R],
+            EquilateralTriangle => &[W],
+            Rectangle | IsoscelesTriangle => &[W, H],
+            Torus => &["Major Radius", "Minor Radius"],
+            Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment => &[],
         }
     }
 
-    pub fn params(&self) -> Params {
-        let is_radial = self.spec().is_radial;
-        Params {
-            dim: if is_radial {
-                vec2(0.2, 0.05)
-            } else {
-                vec2(0.5, 0.2)
-            },
-            ps: [vec2(0.0, 0.0), vec2(0.2, 0.2), vec2(-0.4, 0.35)],
-            rot: 0.0,
+    pub fn default_params(&self) -> Params {
+        let default_ps = self.default_points();
+        let mut ps = [[0.0, 0.0]; 3];
+        for i in 0..default_ps.len() {
+            ps[i] = default_ps[i];
+        }
+
+        let default_dims = self.default_dims();
+        let mut dims = [0.0; 2];
+        for i in 0..default_dims.len() {
+            dims[i] = default_dims[i];
+        }
+
+        Params { dims, ps, rot: 0.0 }
+    }
+
+    pub fn dim_range(&self) -> &[core::ops::RangeInclusive<f32>] {
+        use Shape::*;
+        match self {
+            Disk | Capsule | EquilateralTriangle => &[0.0..=0.5],
+            Rectangle | IsoscelesTriangle => &[0.0..=0.5, 0.0..=0.5],
+            Torus => &[0.0..=0.5, 0.0..=0.5],
+            Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment => &[],
+        }
+    }
+
+    pub fn default_dims(&self) -> &[f32] {
+        use Shape::*;
+        match self {
+            Disk | Capsule | EquilateralTriangle => &[0.2],
+            Rectangle | IsoscelesTriangle => &[0.2, 0.2],
+            Torus => &[0.2, 0.1],
+            Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment => &[],
+        }
+    }
+
+    pub fn default_points(&self) -> &[[f32; 2]] {
+        use Shape::*;
+        match self {
+            Triangle => &[[-0.1, -0.2], [0.3, 0.2], [0.2, -0.3]],
+            Capsule | LineSegment | PlaneSegment => &[[-0.1, -0.1], [0.2, 0.1]],
+            Ray | PlaneRay => &[[0.0, -0.1]],
+            _ => &[],
         }
     }
 }
@@ -123,8 +102,8 @@ pub struct ShapeSpec {
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
 pub struct Params {
-    pub dim: Vec2,
-    pub ps: [Vec2; 3],
+    pub dims: [f32; 2],
+    pub ps: [[f32; 2]; 3],
     pub rot: f32,
 }
 
@@ -133,12 +112,9 @@ pub struct Params {
 pub struct ShaderConstants {
     pub size: Size,
     pub time: f32,
-
     pub cursor: Vec2,
-
     /// Bit mask of the pressed buttons (0 = Left, 1 = Middle, 2 = Right).
     pub mouse_button_pressed: u32,
-
     pub shape: u32,
     pub params: Params,
 }

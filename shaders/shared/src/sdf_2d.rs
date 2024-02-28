@@ -11,34 +11,34 @@ pub fn disk(p: Vec2, r: f32) -> f32 {
 }
 
 pub fn rectangle(p: Vec2, dim: Vec2) -> f32 {
-    let v = p.abs() - dim / 2.0;
+    let v = p.abs() - dim;
     let e = v.max(Vec2::ZERO).length();
     let i = v.max_element().min(0.0);
     e + i
 }
 
-/// d must be normalized or else it will scale space
-pub fn plane(p: Vec2, d: Vec2) -> f32 {
-    d.perp_dot(p)
+// `n` must be normalized
+pub fn plane(p: Vec2, n: Vec2) -> f32 {
+    p.dot(n)
 }
 
-/// d must be normalized or else it will scale space
-pub fn line(p: Vec2, d: Vec2) -> f32 {
-    plane(p, d).abs()
+// `n` must be normalized
+pub fn line(p: Vec2, n: Vec2) -> f32 {
+    plane(p, n).abs()
 }
 
-/// d must be normalized or else it will scale space
+// `d` must be normalized
 pub fn ray(p: Vec2, d: Vec2) -> f32 {
     let t = p.dot(d).max(0.0);
     p.distance(t * d)
 }
 
 pub fn plane_ray(p: Vec2, d: Vec2) -> f32 {
-    ray(p, d) * plane(p, d).signum()
+    ray(p, d) * d.perp_dot(p).signum()
 }
 
 pub fn plane_segment(p: Vec2, a: Vec2, b: Vec2) -> f32 {
-    line_segment(p, a, b) * plane(p - a, b - a).signum()
+    line_segment(p, a, b) * (b - a).perp_dot(p - a).signum()
 }
 
 pub fn line_segment(p: Vec2, a: Vec2, b: Vec2) -> f32 {
@@ -59,17 +59,17 @@ pub fn torus(p: Vec2, r: Vec2) -> f32 {
 
 pub fn equilateral_triangle(p: Vec2, r: f32) -> f32 {
     let (s, c) = (PI / 6.0).sin_cos();
-    isosceles_triangle(p - vec2(0.0, 0.5 * r * s), vec2(2.0 * r * c, r + r * s))
+    isosceles_triangle(p, vec2(r * c, r / 2.0 + r * s))
 }
 
 pub fn isosceles_triangle(p: Vec2, dim: Vec2) -> f32 {
     if dim == Vec2::ZERO {
         return p.length();
     }
-    let p = vec2(p.x.abs(), p.y + dim.y / 2.0);
+    let p = vec2(p.x.abs(), p.y + dim.y);
     ops::intersection(
-        plane_ray(p - vec2(dim.x / 2.0, 0.0), Vec2::NEG_X),
-        plane_segment(p, vec2(0.0, dim.y), vec2(dim.x / 2.0, 0.0)),
+        plane_ray(p - vec2(dim.x, 0.0), Vec2::NEG_X),
+        plane_segment(p, vec2(0.0, dim.y * 2.0), vec2(dim.x, 0.0)),
     )
 }
 
