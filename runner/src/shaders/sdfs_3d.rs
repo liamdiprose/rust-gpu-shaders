@@ -169,9 +169,11 @@ impl crate::controller::Controller for Controller {
         self.repeat_x.ui(ui, "Repeat X", 0.01..=1.0, 0.01);
         self.repeat_y.ui(ui, "Repeat Y", 0.01..=1.0, 0.01);
         self.repeat_z.ui(ui, "Repeat Z", 0.01..=1.0, 0.01);
-        ui.separator();
         let params = &mut self.params[self.shape as usize];
         let labels = self.shape.labels();
+        if labels.len() > 0 {
+            ui.separator();
+        }
         for i in 0..labels.len() {
             let ranges = self.shape.dim_range();
             let range = ranges[i].clone();

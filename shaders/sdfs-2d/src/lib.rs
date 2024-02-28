@@ -18,7 +18,7 @@ fn sdf(p: Vec2, shape: u32, params: Params) -> f32 {
     let p2: Vec2 = params.ps[2].into();
     let p = p.rotate(Vec2::from_angle(params.rot));
 
-    match Shape::from_u32(shape) {
+    let mut d = match Shape::from_u32(shape) {
         Disk => sdf::disk(p, radius),
         Rectangle => sdf::rectangle(p, dim),
         EquilateralTriangle => sdf::equilateral_triangle(p, radius),
@@ -32,7 +32,17 @@ fn sdf(p: Vec2, shape: u32, params: Params) -> f32 {
         PlaneSegment => sdf::plane_segment(p, p0, p1),
         Ray => sdf::ray(p - p0, Vec2::X),
         PlaneRay => sdf::plane_ray(p - p0, Vec2::X),
+    };
+
+    if params.pad.has_value() {
+        d = sdf::ops::pad(d, params.pad.value)
     }
+
+    if params.onion.has_value() {
+        d = sdf::ops::onion(d, params.onion.value)
+    }
+
+    d
 }
 
 #[spirv(fragment)]

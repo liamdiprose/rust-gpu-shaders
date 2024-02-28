@@ -1,3 +1,4 @@
+use crate::{egui_components::enabled_number::EnabledNumber, window::UserEvent};
 use bytemuck::Zeroable;
 use egui::{Context, CursorIcon};
 use glam::{vec2, Vec2};
@@ -13,8 +14,6 @@ use winit::{
     event_loop::EventLoopProxy,
 };
 
-use crate::window::UserEvent;
-
 pub struct Controller {
     size: PhysicalSize<u32>,
     start: Instant,
@@ -26,6 +25,8 @@ pub struct Controller {
     shape: Shape,
     params: Vec<Params>,
     shader_constants: ShaderConstants,
+    onion: EnabledNumber,
+    pad: EnabledNumber,
 }
 
 impl crate::controller::Controller for Controller {
@@ -41,6 +42,8 @@ impl crate::controller::Controller for Controller {
             shape: Shape::Disk,
             params: Shape::iter().map(|shape| shape.default_params()).collect(),
             shader_constants: ShaderConstants::zeroed(),
+            onion: EnabledNumber::new(0.05, false),
+            pad: EnabledNumber::new(0.05, false),
         }
     }
 
@@ -103,7 +106,11 @@ impl crate::controller::Controller for Controller {
             mouse_button_pressed: !(1
                 << (self.mouse_button_pressed && self.drag_point.is_none()) as u32),
             shape: self.shape as u32,
-            params: self.params[self.shape as usize],
+            params: Params {
+                onion: self.onion.into(),
+                pad: self.pad.into(),
+                ..self.params[self.shape as usize]
+            },
         };
     }
 
@@ -126,8 +133,14 @@ impl crate::controller::Controller for Controller {
         for shape in Shape::iter() {
             ui.radio_value(&mut self.shape, shape, shape.to_string());
         }
+        ui.separator();
+        self.pad.ui(ui, "Pad", 0.0..=0.1, 0.01);
+        self.onion.ui(ui, "Onion", 0.0..=0.1, 0.01);
         let params = &mut self.params[self.shape as usize];
         let labels = self.shape.labels();
+        if labels.len() > 0 {
+            ui.separator();
+        }
         for i in 0..labels.len() {
             let ranges = self.shape.dim_range();
             let range = ranges[i].clone();

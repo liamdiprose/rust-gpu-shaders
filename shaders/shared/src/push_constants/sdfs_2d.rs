@@ -1,4 +1,5 @@
 use super::{Size, Vec2};
+use crate::fast_optional::Optional_f32;
 use bytemuck::{Pod, Zeroable};
 
 #[cfg_attr(not(target_arch = "spirv"), derive(strum::EnumIter, strum::Display))]
@@ -59,7 +60,13 @@ impl Shape {
             dims[i] = default_dims[i];
         }
 
-        Params { dims, ps, rot: 0.0 }
+        Params {
+            dims,
+            ps,
+            rot: 0.0,
+            pad: Optional_f32::NONE,
+            onion: Optional_f32::NONE,
+        }
     }
 
     pub fn dim_range(&self) -> &[core::ops::RangeInclusive<f32>] {
@@ -105,6 +112,8 @@ pub struct Params {
     pub dims: [f32; 2],
     pub ps: [[f32; 2]; 3],
     pub rot: f32,
+    pub onion: Optional_f32,
+    pub pad: Optional_f32,
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]
