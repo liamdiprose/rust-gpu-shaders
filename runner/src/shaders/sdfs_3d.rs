@@ -166,9 +166,9 @@ impl crate::controller::Controller for Controller {
         ui.separator();
         self.pad.ui(ui, "Pad", 0.0..=0.1, 0.01);
         self.onion.ui(ui, "Onion", 0.0..=0.1, 0.01);
-        self.repeat_x.ui(ui, "Repeat X", 0.0..=0.5, 0.01);
-        self.repeat_y.ui(ui, "Repeat Y", 0.0..=0.5, 0.01);
-        self.repeat_z.ui(ui, "Repeat Z", 0.0..=0.5, 0.01);
+        self.repeat_x.ui(ui, "Repeat X", 0.01..=1.0, 0.01);
+        self.repeat_y.ui(ui, "Repeat Y", 0.01..=1.0, 0.01);
+        self.repeat_z.ui(ui, "Repeat Z", 0.01..=1.0, 0.01);
         ui.separator();
         let params = &mut self.params[self.shape as usize];
         let labels = self.shape.labels();

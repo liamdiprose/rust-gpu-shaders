@@ -86,12 +86,10 @@ impl crate::controller::Controller for Controller {
             }
         };
         self.camera_distance *= scroll;
-        // self.camera *= 1.0 / scroll;
     }
 
     fn resize(&mut self, size: PhysicalSize<u32>) {
-        self.size.width = size.width;
-        self.size.height = size.height;
+        self.size = size;
     }
 
     fn update(&mut self) {
