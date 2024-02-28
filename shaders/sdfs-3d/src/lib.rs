@@ -2,7 +2,6 @@
 
 use crate::functional::vec::*;
 use shared::{
-    fast_optional::Optional_f32,
     push_constants::sdfs_3d::{sdf_shape, sdf_slice, Params, ShaderConstants, Shape},
     sdf_3d::{self as sdf, ops},
     *,
@@ -41,7 +40,6 @@ fn ray_march(
     cursor: Vec3,
     cursor_d: f32,
     mouse_pressed: bool,
-    onion: Optional_f32,
 ) -> (f32, RayMarchResult) {
     use RayMarchResult::*;
     let mut d0 = 0.0;
@@ -49,7 +47,7 @@ fn ray_march(
     for _ in 0..MAX_STEPS {
         let p = ro + rd * d0;
         let slice_d = sdf_slice(p, slice_z);
-        let sliced_shape_d = ops::difference(sdf_shape(p, shape, params, onion), slice_d);
+        let sliced_shape_d = ops::difference(sdf_shape(p, shape, params), slice_d);
         let ds = if mouse_pressed {
             let sliced_ball_d = ops::difference(sdf_ball(p, cursor, cursor_d), slice_d);
             sliced_shape_d.min(sliced_ball_d)
@@ -74,7 +72,7 @@ fn ray_march(
     }
 
     let p = ro + rd * 1e15;
-    let sliced_shape_d = ops::difference(sdf_shape(p, shape, params, onion), sdf_slice(p, slice_z));
+    let sliced_shape_d = ops::difference(sdf_shape(p, shape, params), sdf_slice(p, slice_z));
     (
         d0,
         if sliced_shape_d < 0.0 {
@@ -106,19 +104,12 @@ fn ray_march_distance_texture(
     d0
 }
 
-fn get_d_to_shape_at_slice(
-    ro: Vec3,
-    rd: Vec3,
-    shape: Shape,
-    slice_z: f32,
-    params: Params,
-    onion: Optional_f32,
-) -> f32 {
+fn get_d_to_shape_at_slice(ro: Vec3, rd: Vec3, shape: Shape, slice_z: f32, params: Params) -> f32 {
     let x = (slice_z - ro.z) / rd.z;
     if x < 0.0 {
         MAX_DIST * 8.0 // Makes a nice color
     } else {
-        sdf_shape(ro + rd * x, shape, params, onion)
+        sdf_shape(ro + rd * x, shape, params)
     }
 }
 
@@ -149,8 +140,7 @@ pub fn main_fs(
     let slice_z = constants.slice_z;
     let mouse_pressed = constants.mouse_button_pressed & 1 != 0;
     let shape = Shape::from_u32(constants.shape);
-    let onion = constants.onion;
-    let cursor_d = sdf_shape(cursor, shape, constants.params, onion);
+    let cursor_d = sdf_shape(cursor, shape, constants.params);
     let (d0, ray_march_result) = ray_march(
         ro,
         rd,
@@ -160,7 +150,6 @@ pub fn main_fs(
         cursor,
         cursor_d.abs(),
         mouse_pressed,
-        onion,
     );
     let d1 = if mouse_pressed {
         ray_march_distance_texture(ro, rd, slice_z, cursor, cursor_d.abs())
@@ -203,7 +192,7 @@ pub fn main_fs(
             )
     };
 
-    let slice_d = get_d_to_shape_at_slice(ro, rd, shape, slice_z, constants.params, onion);
+    let slice_d = get_d_to_shape_at_slice(ro, rd, shape, slice_z, constants.params);
 
     let col = if (ray_march_result == RayMarchResult::DistanceTexture)
         || (d1 < MAX_DIST && cursor_d < 0.0)

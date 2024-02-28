@@ -58,7 +58,12 @@ impl Shape {
             dims[i] = default_dims[i];
         }
 
-        Params { dims, ps }
+        Params {
+            dims,
+            ps,
+            onion: Optional_f32::NONE,
+            pad: Optional_f32::NONE,
+        }
     }
 
     pub fn dim_range(&self) -> &[core::ops::RangeInclusive<f32>] {
@@ -113,6 +118,8 @@ impl Shape {
 pub struct Params {
     pub dims: [f32; 6],
     pub ps: [[f32; 3]; 3],
+    pub onion: Optional_f32,
+    pub pad: Optional_f32,
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -131,15 +138,9 @@ pub struct ShaderConstants {
     // pub rotation: f32,
     pub shape: u32,
     pub params: Params,
-    pub onion: Optional_f32,
 }
 
-pub fn sdf_shape(
-    p: spirv_std::glam::Vec3,
-    shape: Shape,
-    params: Params,
-    onion: Optional_f32,
-) -> f32 {
+pub fn sdf_shape(p: spirv_std::glam::Vec3, shape: Shape, params: Params) -> f32 {
     use crate::sdf_3d as sdf;
     use spirv_std::glam::{self, Vec3Swizzles};
     use Shape::*;
@@ -162,8 +163,12 @@ pub fn sdf_shape(
         Plane => sdf::plane(p, orientation),
     };
 
-    if onion.has_value() {
-        d = sdf::ops::onion(d, onion.value)
+    if params.pad.has_value() {
+        d = sdf::ops::pad(d, params.pad.value)
+    }
+
+    if params.onion.has_value() {
+        d = sdf::ops::onion(d, params.onion.value)
     }
 
     d

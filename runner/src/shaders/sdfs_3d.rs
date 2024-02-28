@@ -30,6 +30,7 @@ pub struct Controller {
     camera: Vec2,
     slice_z: f32,
     onion: EnabledNumber,
+    pad: EnabledNumber,
 }
 
 impl crate::controller::Controller for Controller {
@@ -48,6 +49,7 @@ impl crate::controller::Controller for Controller {
             camera: vec2(0.2, 0.7),
             slice_z: 0.0,
             onion: EnabledNumber::new(0.05, false),
+            pad: EnabledNumber::new(0.05, false),
         }
     }
 
@@ -132,8 +134,11 @@ impl crate::controller::Controller for Controller {
             slice_z: self.slice_z,
             translate: self.camera.into(),
             shape: self.shape as u32,
-            params: self.params[self.shape as usize],
-            onion: self.onion.into(),
+            params: Params {
+                onion: self.onion.into(),
+                pad: self.pad.into(),
+                ..self.params[self.shape as usize]
+            },
         };
     }
 
@@ -153,10 +158,13 @@ impl crate::controller::Controller for Controller {
         } else {
             CursorIcon::Default
         });
-        self.onion.ui(ui, 0.0..=0.1, 0.01);
         for shape in Shape::iter() {
             ui.radio_value(&mut self.shape, shape, shape.to_string());
         }
+        ui.separator();
+        self.pad.ui(ui, "Pad", 0.0..=0.1, 0.01);
+        self.onion.ui(ui, "Onion", 0.0..=0.1, 0.01);
+        ui.separator();
         let params = &mut self.params[self.shape as usize];
         let labels = self.shape.labels();
         for i in 0..labels.len() {
@@ -195,13 +203,7 @@ impl Controller {
         p.z = self.slice_z as f64;
         let mut d;
         while {
-            d = sdf_shape(
-                p.as_vec3(),
-                self.shape,
-                self.params[self.shape as usize],
-                self.onion.into(),
-            )
-            .abs() as f64;
+            d = sdf_shape(p.as_vec3(), self.shape, self.params[self.shape as usize]).abs() as f64;
             d > 1.0
         } {
             p = p - p.normalize() * (d - 1.0);

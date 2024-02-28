@@ -3,7 +3,7 @@ use spirv_std::glam::{vec3, Vec2, Vec3, Vec3Swizzles};
 use spirv_std::num_traits::Float;
 
 pub use crate::sdf_2d::ops::{
-    difference, intersection, onion, round, smooth_union, symmetric_difference, union,
+    difference, intersection, onion, pad, smooth_union, symmetric_difference, union,
 };
 
 pub fn repeat_x(p: Vec3, factor: f32) -> Vec3 {
