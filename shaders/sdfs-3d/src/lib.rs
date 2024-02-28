@@ -140,6 +140,7 @@ pub fn main_fs(
     let slice_z = constants.slice_z;
     let mouse_pressed = constants.mouse_button_pressed & 1 != 0;
     let shape = Shape::from_u32(constants.shape);
+    let slice_d = get_d_to_shape_at_slice(ro, rd, shape, slice_z, constants.params);
     let cursor_d = sdf_shape(cursor, shape, constants.params);
     let (d0, ray_march_result) = ray_march(
         ro,
@@ -184,7 +185,9 @@ pub fn main_fs(
             )
             .lerp(
                 shape_col,
-                if ray_march_result == RayMarchResult::DistanceTexture {
+                if ray_march_result == RayMarchResult::DistanceTexture
+                    || (slice_d < 0.0 && ro.z < 0.0)
+                {
                     0.0
                 } else {
                     0.5
@@ -192,15 +195,16 @@ pub fn main_fs(
             )
     };
 
-    let slice_d = get_d_to_shape_at_slice(ro, rd, shape, slice_z, constants.params);
-
     let col = if (ray_march_result == RayMarchResult::DistanceTexture)
-        || (d1 < MAX_DIST && cursor_d < 0.0)
         || (ray_march_result == RayMarchResult::Shape && ro.z > slice_z && slice_d > 0.0)
     {
         col
     } else {
-        let base = if slice_d < 0.0 { COL_INSIDE } else { col };
+        let base = if slice_d < 0.0 && d1 >= MAX_DIST {
+            COL_INSIDE
+        } else {
+            col
+        };
         let s = if slice_d < 0.0 && ro.z > slice_z {
             0.8
         } else {
