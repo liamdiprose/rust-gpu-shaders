@@ -93,11 +93,10 @@ impl Shape {
         use Shape::*;
         match self {
             Sphere => &[0.2],
-            Cuboid => &[0.4, 0.3, 0.4],
-            CuboidFrame => &[0.4, 0.3, 0.4, 0.02, 0.02, 0.02],
-            CuboidFrameRadial => &[0.4, 0.3, 0.4, 0.02],
-            Capsule => &[0.2],
-            Cylinder => &[0.2],
+            Cuboid => &[0.2, 0.15, 0.2],
+            CuboidFrame => &[0.2, 0.15, 0.2, 0.04, 0.04, 0.04],
+            CuboidFrameRadial => &[0.2, 0.15, 0.2, 0.02],
+            Capsule | Cylinder => &[0.2],
             Torus => &[0.2, 0.1],
             Disk => &[0.2, 0.02],
             Plane => &[],

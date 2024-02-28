@@ -1,5 +1,5 @@
-use crate::saturate;
 use crate::functional::tuple::*;
+use crate::saturate;
 use spirv_std::glam::{vec2, vec3, Vec2, Vec3};
 use spirv_std::num_traits::Float;
 
@@ -56,14 +56,14 @@ pub fn cylinder(p: Vec3, a: Vec3, b: Vec3, r: f32) -> f32 {
 }
 
 pub fn cuboid(p: Vec3, dim: Vec3) -> f32 {
-    let v = p.abs() - dim / 2.0;
+    let v = p.abs() - dim;
     let e = v.max(Vec3::ZERO).length();
     let i = v.max_element().min(0.0);
     e + i
 }
 
 pub fn cuboid_frame_radial(p: Vec3, dim: Vec3, r: f32) -> f32 {
-    let v = p.abs() - dim / 2.0;
+    let v = p.abs() - dim;
     (
         vec3(v.x, v.y, v.z.max(0.0)),
         vec3(v.x, v.y.max(0.0), v.z),
@@ -76,7 +76,7 @@ pub fn cuboid_frame_radial(p: Vec3, dim: Vec3, r: f32) -> f32 {
 }
 
 pub fn cuboid_frame(p: Vec3, dim: Vec3, dim2: Vec3) -> f32 {
-    let p = p.abs() - dim / 2.0;
+    let p = p.abs() - dim - dim2 / 2.0;
     let q = (p + dim2 / 2.0).abs() - dim2 / 2.0;
     (
         vec3(p.x, q.y, q.z),
