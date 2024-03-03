@@ -19,6 +19,8 @@ pub enum Shape {
     PlaneSegment,
     Ray,
     PlaneRay,
+    Hexagon,
+    Pentagon,
 }
 
 impl Shape {
@@ -39,7 +41,7 @@ impl Shape {
         const W: &'static str = "Width";
         const H: &'static str = "Height";
         match self {
-            Disk | Capsule | EquilateralTriangle => &[R],
+            Disk | Capsule | Hexagon | Pentagon | EquilateralTriangle => &[R],
             Rectangle | IsoscelesTriangle => &[W, H],
             Torus => &["Major Radius", "Minor Radius"],
             Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment => &[],
@@ -72,7 +74,7 @@ impl Shape {
     pub fn dim_range(&self) -> &[core::ops::RangeInclusive<f32>] {
         use Shape::*;
         match self {
-            Disk | Capsule | EquilateralTriangle => &[0.0..=0.5],
+            Disk | Capsule | EquilateralTriangle | Hexagon | Pentagon => &[0.0..=0.5],
             Rectangle => &[0.0..=1.0, 0.0..=1.0],
             IsoscelesTriangle => &[0.0..=1.0, -0.5..=0.5],
             Torus => &[0.0..=0.5, 0.0..=0.2],
@@ -83,7 +85,7 @@ impl Shape {
     pub fn default_dims(&self) -> &[f32] {
         use Shape::*;
         match self {
-            Disk | Capsule | EquilateralTriangle => &[0.2],
+            Disk | Capsule | EquilateralTriangle | Hexagon | Pentagon => &[0.2],
             Rectangle | IsoscelesTriangle => &[0.4, 0.3],
             Torus => &[0.2, 0.1],
             Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment => &[],

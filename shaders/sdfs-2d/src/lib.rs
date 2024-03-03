@@ -40,6 +40,8 @@ fn sdf(mut p: Vec2, shape: u32, params: Params) -> f32 {
         PlaneSegment => sdf::plane_segment(p, p0, p1),
         Ray => sdf::ray(p - p0, Vec2::X),
         PlaneRay => sdf::plane_ray(p - p0, Vec2::X),
+        Hexagon => sdf::hexagon(p - p0, radius),
+        Pentagon => sdf::pentagon(p - p0, radius),
     };
 
     if params.pad.has_value() {

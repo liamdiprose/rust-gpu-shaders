@@ -111,3 +111,26 @@ pub fn polygon<const N: usize>(p: Vec2, ps: &[Vec2; N]) -> f32 {
     }
     s * d.sqrt()
 }
+
+pub fn hexagon(mut p: Vec2, r: f32) -> f32 {
+    const COS_FRAC_PI_6: f32 = 0.866025404;
+    const TAN_FRAC_PI_6: f32 = 0.577350269;
+    const K: Vec2 = vec2(-COS_FRAC_PI_6, 0.5);
+    p = p.abs();
+    p -= 2.0 * K * p.dot(K).min(0.0);
+    p -= vec2(p.x.clamp(-TAN_FRAC_PI_6 * r, TAN_FRAC_PI_6 * r), r);
+    p.length() * p.y.signum()
+}
+
+pub fn pentagon(mut p: Vec2, r: f32) -> f32 {
+    const SIN_FRAC_PI_5: f32 = 0.809016994;
+    const COS_FRAC_PI_5: f32 = 0.587785252;
+    const TAN_FRAC_PI_5: f32 = 0.726542528;
+    const K1: Vec2 = vec2(-SIN_FRAC_PI_5, COS_FRAC_PI_5);
+    const K2: Vec2 = vec2(SIN_FRAC_PI_5, COS_FRAC_PI_5);
+    p = vec2(p.x.abs(), -p.y);
+    p -= 2.0 * K1 * p.dot(K1).min(0.0);
+    p -= 2.0 * K2 * p.dot(K2).min(0.0);
+    p -= vec2(p.x.clamp(-TAN_FRAC_PI_5 * r, TAN_FRAC_PI_5 * r), r);
+    p.length() * p.y.signum()
+}
