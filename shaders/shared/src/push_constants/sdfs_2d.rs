@@ -22,6 +22,7 @@ pub enum Shape {
     Hexagon,
     Pentagon,
     Polygon,
+    Cross,
 }
 
 impl Shape {
@@ -45,6 +46,7 @@ impl Shape {
             Disk | Capsule | Hexagon | Pentagon | EquilateralTriangle => &[R],
             Rectangle | IsoscelesTriangle => &[W, H],
             Torus => &["Major Radius", "Minor Radius"],
+            Cross => &["Length", "Thickness"],
             Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment | Polygon => &[],
         }
     }
@@ -56,6 +58,7 @@ impl Shape {
             Rectangle => &[0.0..=1.0, 0.0..=1.0],
             IsoscelesTriangle => &[0.0..=1.0, -0.5..=0.5],
             Torus => &[0.0..=0.5, 0.0..=0.2],
+            Cross => &[0.0..=0.5, 0.0..=0.5],
             Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment | Polygon => &[],
         }
     }
@@ -66,6 +69,7 @@ impl Shape {
             Disk | Capsule | EquilateralTriangle | Hexagon | Pentagon => &[0.2],
             Rectangle | IsoscelesTriangle => &[0.4, 0.3],
             Torus => &[0.2, 0.1],
+            Cross => &[0.35, 0.1],
             Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment | Polygon => &[],
         }
     }

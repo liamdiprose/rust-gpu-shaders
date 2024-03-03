@@ -45,6 +45,7 @@ fn sdf(mut p: Vec2, shape: u32, params: Params) -> f32 {
         Hexagon => sdf::hexagon(p - p0, radius),
         Pentagon => sdf::pentagon(p - p0, radius),
         Polygon => sdf::polygon(p, [p0, p1, p2, p3, p4]),
+        Cross => sdf::cross(p, dim),
     };
 
     if params.pad.has_value() {

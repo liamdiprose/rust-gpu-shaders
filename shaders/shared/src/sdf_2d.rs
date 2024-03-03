@@ -6,7 +6,7 @@ use crate::{
     functional::{tuple::*, vec::*},
     SQRT_3,
 };
-use spirv_std::glam::{vec2, BVec3, Vec2};
+use spirv_std::glam::{vec2, BVec3, Vec2, Vec2Swizzles};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 
@@ -132,4 +132,20 @@ pub fn pentagon(mut p: Vec2, r: f32) -> f32 {
     p -= 2.0 * K2 * p.dot(K2).min(0.0);
     p -= vec2(p.x.clamp(-TAN_FRAC_PI_5 * r, TAN_FRAC_PI_5 * r), r);
     p.length() * p.y.signum()
+}
+
+pub fn cross(mut p: Vec2, b: Vec2) -> f32 {
+    p = p.abs();
+    if p.y > p.x {
+        p = p.yx()
+    }
+    let u = p - b.y;
+    let v = p - b;
+    if u.x < 0.0 {
+        (-u.length()).max(v.x)
+    } else if v.x < 0.0 || v.y < 0.0 {
+        v.max_element()
+    } else {
+        v.length()
+    }
 }
