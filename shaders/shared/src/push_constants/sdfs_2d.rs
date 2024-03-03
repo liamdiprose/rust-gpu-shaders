@@ -39,8 +39,7 @@ impl Shape {
         const W: &'static str = "Width";
         const H: &'static str = "Height";
         match self {
-            Disk | Capsule => &[R],
-            EquilateralTriangle => &[W],
+            Disk | Capsule | EquilateralTriangle => &[R],
             Rectangle | IsoscelesTriangle => &[W, H],
             Torus => &["Major Radius", "Minor Radius"],
             Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment => &[],
@@ -74,8 +73,9 @@ impl Shape {
         use Shape::*;
         match self {
             Disk | Capsule | EquilateralTriangle => &[0.0..=0.5],
-            Rectangle | IsoscelesTriangle => &[0.0..=0.5, 0.0..=0.5],
-            Torus => &[0.0..=0.5, 0.0..=0.5],
+            Rectangle => &[0.0..=1.0, 0.0..=1.0],
+            IsoscelesTriangle => &[0.0..=1.0, -0.5..=0.5],
+            Torus => &[0.0..=0.5, 0.0..=0.2],
             Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment => &[],
         }
     }
@@ -84,7 +84,7 @@ impl Shape {
         use Shape::*;
         match self {
             Disk | Capsule | EquilateralTriangle => &[0.2],
-            Rectangle | IsoscelesTriangle => &[0.2, 0.2],
+            Rectangle | IsoscelesTriangle => &[0.4, 0.3],
             Torus => &[0.2, 0.1],
             Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment => &[],
         }

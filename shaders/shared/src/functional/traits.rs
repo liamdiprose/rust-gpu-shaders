@@ -23,8 +23,10 @@ pub trait Zip {
     fn zip(self, other: Self) -> Self::Output;
 }
 
-pub trait Map {
-    fn map<F>(self, f: F) -> Self
+pub trait Map<T, U> {
+    type Output;
+    fn map<F>(self, f: F) -> Self::Output
     where
-        F: Fn(f32) -> f32;
+        F: Fn(T) -> U,
+        T: Copy;
 }

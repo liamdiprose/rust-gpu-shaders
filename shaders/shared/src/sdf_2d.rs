@@ -1,5 +1,11 @@
-use crate::functional::tuple::*;
-use crate::{saturate, PI};
+//! Module containing 2d signed distance primitives.
+//! Many are adapted from https://iquilezles.org/articles/distfunctions2d/ (Inigo Quilez)
+//!
+
+use crate::{
+    functional::{tuple::*, vec::*},
+    SQRT_3,
+};
 use spirv_std::glam::{vec2, BVec3, Vec2};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
@@ -11,10 +17,8 @@ pub fn disk(p: Vec2, r: f32) -> f32 {
 }
 
 pub fn rectangle(p: Vec2, dim: Vec2) -> f32 {
-    let v = p.abs() - dim;
-    let e = v.max(Vec2::ZERO).length();
-    let i = v.max_element().min(0.0);
-    e + i
+    let v = p.abs() - dim * 0.5;
+    v.max(Vec2::ZERO).length() + v.max_element().min(0.0)
 }
 
 // `n` must be normalized
@@ -29,10 +33,10 @@ pub fn line(p: Vec2, n: Vec2) -> f32 {
 
 // `d` must be normalized
 pub fn ray(p: Vec2, d: Vec2) -> f32 {
-    let t = p.dot(d).max(0.0);
-    p.distance(t * d)
+    p.distance(d * p.dot(d).max(0.0))
 }
 
+// `d` must be normalized
 pub fn plane_ray(p: Vec2, d: Vec2) -> f32 {
     ray(p, d) * d.perp_dot(p).signum()
 }
@@ -42,11 +46,7 @@ pub fn plane_segment(p: Vec2, a: Vec2, b: Vec2) -> f32 {
 }
 
 pub fn line_segment(p: Vec2, a: Vec2, b: Vec2) -> f32 {
-    let ap = p - a;
-    let ab = b - a;
-    let t = saturate(ap.dot(ab) / ab.length_squared());
-    let c = a + t * ab;
-    p.distance(c)
+    p.distance(a + (p - a).project_onto_segment(b - a))
 }
 
 pub fn capsule(p: Vec2, a: Vec2, b: Vec2, r: f32) -> f32 {
@@ -57,38 +57,43 @@ pub fn torus(p: Vec2, r: Vec2) -> f32 {
     (p.length() - r.x).abs() - r.y
 }
 
-pub fn equilateral_triangle(p: Vec2, r: f32) -> f32 {
-    let (s, c) = (PI / 6.0).sin_cos();
-    isosceles_triangle(p, vec2(r * c, r / 2.0 + r * s))
-}
-
-pub fn isosceles_triangle(p: Vec2, dim: Vec2) -> f32 {
-    if dim == Vec2::ZERO {
-        return p.length();
+pub fn equilateral_triangle(mut p: Vec2, mut r: f32) -> f32 {
+    const COS_FRAC_PI_6: f32 = 0.866025404;
+    const K: f32 = SQRT_3;
+    r *= COS_FRAC_PI_6;
+    p = vec2(p.x.abs() - r, p.y + r / K);
+    if p.x + K * p.y > 0.0 {
+        p = vec2(p.x - K * p.y, -K * p.x - p.y) * 0.5;
     }
-    let p = vec2(p.x.abs(), p.y + dim.y);
-    ops::intersection(
-        plane_ray(p - vec2(dim.x, 0.0), Vec2::NEG_X),
-        plane_segment(p, vec2(0.0, dim.y * 2.0), vec2(dim.x, 0.0)),
-    )
+    p.x -= p.x.clamp(-2.0 * r, 0.0);
+    -p.length() * p.y.signum()
 }
 
-/// https://iquilezles.org/articles/distfunctions2d/
+pub fn isosceles_triangle(mut p: Vec2, mut dim: Vec2) -> f32 {
+    p = vec2(p.x.abs(), dim.y - p.y);
+    dim.x /= 0.5;
+    let a = p.reject_from_segment(dim);
+    let b = p - vec2(p.x.min(dim.x), dim.y);
+    let s = dim.y.signum();
+    (a, b).map(Vec2::length_squared).min_element().sqrt()
+        * (s * p.perp_dot(dim)).max(s * (p.y - dim.y)).signum()
+}
+
 pub fn triangle(p: Vec2, p0: Vec2, p1: Vec2, p2: Vec2) -> f32 {
     let e = (p1 - p0, p2 - p1, p0 - p2);
     let w = (p - p0, p - p1, p - p2);
     let ew = e.zip(w);
     let sgn = {
-        let s = (e.0.x * e.2.y - e.0.y * e.2.x).signum();
-        -ew.map(|(e, w)| s * (w.x * e.y - w.y * e.x))
-            .min_element()
-            .signum()
+        let s = e.0.perp_dot(e.2).signum();
+        -ew.map(|(e, w)| s * w.perp_dot(e)).min_element().signum()
     };
-    let d = ew.map(|(e, w)| (w - e * saturate(w.dot(e) / e.length_squared())).length_squared());
-    sgn * (p - p0).length_squared().min(d.min_element()).sqrt()
+    sgn * ew
+        .map(|(e, w)| w.reject_from_segment(e).length_squared())
+        .min_element()
+        .min((p - p0).length_squared())
+        .sqrt()
 }
 
-/// https://iquilezles.org/articles/distfunctions2d/
 pub fn polygon<const N: usize>(p: Vec2, ps: &[Vec2; N]) -> f32 {
     let mut d = (p - ps[0]).length_squared();
     let mut s = 1.0;

@@ -53,7 +53,7 @@ macro_rules! tuple_impls {
                  ($((self.$idx, other.$idx)),+,)
             }
         }
-    };
+    }
 }
 
 tuple_impls! { 0 1 }

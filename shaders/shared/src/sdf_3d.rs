@@ -1,5 +1,8 @@
-use crate::functional::tuple::*;
-use crate::saturate;
+//! Module containing 3d signed distance primitives.
+//! Many are adapted from https://iquilezles.org/articles/distfunctions/ (Inigo Quilez)
+//!
+
+use crate::functional::{tuple::*, vec::*};
 use spirv_std::glam::{vec2, vec3, Vec2, Vec3};
 use spirv_std::num_traits::Float;
 
@@ -17,8 +20,10 @@ pub fn torus(p: Vec3, r: Vec2, n: Vec3) -> f32 {
 
 // `n` must be normalized
 pub fn disk(p: Vec3, r: Vec2, n: Vec3) -> f32 {
-    let v = vec2(p.cross(n).length() - r.x, p.dot(n).abs());
-    v.max(Vec2::ZERO).length() + v.max_element().min(0.0) - r.y
+    vec2(p.cross(n).length() - r.x, p.dot(n).abs())
+        .max(Vec2::ZERO)
+        .length()
+        - r.y
 }
 
 pub fn sphere(p: Vec3, r: f32) -> f32 {
@@ -34,10 +39,7 @@ pub fn tetrahedron(p: Vec3, r: f32) -> f32 {
 }
 
 pub fn line_segment(p: Vec3, a: Vec3, b: Vec3) -> f32 {
-    let ap = p - a;
-    let ab = b - a;
-    let t = saturate(ap.dot(ab) / ab.length_squared());
-    p.distance(a + t * ab)
+    p.distance(a + (p - a).project_onto_segment(b - a))
 }
 
 pub fn capsule(p: Vec3, a: Vec3, b: Vec3, r: f32) -> f32 {
@@ -45,21 +47,18 @@ pub fn capsule(p: Vec3, a: Vec3, b: Vec3, r: f32) -> f32 {
 }
 
 pub fn cylinder(p: Vec3, a: Vec3, b: Vec3, r: f32) -> f32 {
-    let ap = p - a;
     let ab = b - a;
-    let t = ap.dot(ab) / ab.length_squared();
-    let x = p.distance(a + t * ab) - r;
-    let y = ((t - 0.5).abs() - 0.5) * ab.length();
-    let e = vec2(x, y).max(Vec2::ZERO).length();
-    let i = x.max(y).min(0.0);
-    e + i
+    let t = (p - a).dot(ab) / ab.length_squared();
+    let v = vec2(
+        p.distance(a + t * ab) - r,
+        ((t - 0.5).abs() - 0.5) * ab.length(),
+    );
+    v.max(Vec2::ZERO).length() + v.max_element().min(0.0)
 }
 
 pub fn cuboid(p: Vec3, dim: Vec3) -> f32 {
     let v = p.abs() - dim;
-    let e = v.max(Vec3::ZERO).length();
-    let i = v.max_element().min(0.0);
-    e + i
+    v.max(Vec3::ZERO).length() + v.max_element().min(0.0)
 }
 
 pub fn cuboid_frame_radial(p: Vec3, dim: Vec3, r: f32) -> f32 {
