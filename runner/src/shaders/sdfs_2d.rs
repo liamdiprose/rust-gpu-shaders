@@ -79,10 +79,10 @@ impl crate::controller::Controller for Controller {
             self.can_drag = self.params[self.shape as usize].ps[0..num_points as usize]
                 .iter()
                 .position(|p| {
-                    (rotate((*p).into(), -self.params[self.shape as usize].rot)
+                    (rotate((*p).into(), self.params[self.shape as usize].rot)
                         - self.from_pixels(self.cursor))
-                    .length()
-                        < 0.01
+                    .length_squared()
+                        < 0.0005
                 });
         }
     }

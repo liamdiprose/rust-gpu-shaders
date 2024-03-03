@@ -16,6 +16,8 @@ fn sdf(mut p: Vec2, shape: u32, params: Params) -> f32 {
     let p0: Vec2 = params.ps[0].into();
     let p1: Vec2 = params.ps[1].into();
     let p2: Vec2 = params.ps[2].into();
+    let p3: Vec2 = params.ps[3].into();
+    let p4: Vec2 = params.ps[4].into();
     p = p.rotate(Vec2::from_angle(params.rot));
 
     if params.repeat[0].has_value() {
@@ -42,6 +44,7 @@ fn sdf(mut p: Vec2, shape: u32, params: Params) -> f32 {
         PlaneRay => sdf::plane_ray(p - p0, Vec2::X),
         Hexagon => sdf::hexagon(p - p0, radius),
         Pentagon => sdf::pentagon(p - p0, radius),
+        Polygon => sdf::polygon(p, [p0, p1, p2, p3, p4]),
     };
 
     if params.pad.has_value() {

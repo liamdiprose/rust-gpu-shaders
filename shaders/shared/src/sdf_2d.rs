@@ -71,7 +71,7 @@ pub fn equilateral_triangle(mut p: Vec2, mut r: f32) -> f32 {
 
 pub fn isosceles_triangle(mut p: Vec2, mut dim: Vec2) -> f32 {
     p = vec2(p.x.abs(), dim.y - p.y);
-    dim.x /= 0.5;
+    dim.x *= 0.5;
     let a = p.reject_from_segment(dim);
     let b = p - vec2(p.x.min(dim.x), dim.y);
     let s = dim.y.signum();
@@ -94,17 +94,16 @@ pub fn triangle(p: Vec2, p0: Vec2, p1: Vec2, p2: Vec2) -> f32 {
         .sqrt()
 }
 
-pub fn polygon<const N: usize>(p: Vec2, ps: &[Vec2; N]) -> f32 {
+pub fn polygon<const N: usize>(p: Vec2, ps: [Vec2; N]) -> f32 {
     let mut d = (p - ps[0]).length_squared();
     let mut s = 1.0;
     let mut j = N - 1;
     for i in 0..N {
         let e = ps[j] - ps[i];
         let w = p - ps[i];
-        let b = w - e * saturate(w.dot(e) / e.length_squared());
-        d = d.min(b.length_squared());
-        let c = BVec3::new(p.y >= ps[i].y, p.y < ps[j].y, e.x * w.y > e.y * w.x);
-        if c.all() || (!c).all() {
+        d = d.min(w.reject_from_segment(e).length_squared());
+        let c = BVec3::new(p.y >= ps[i].y, p.y < ps[j].y, e.perp_dot(w) > 0.0);
+        if c.all() || !c.any() {
             s = -s;
         }
         j = i;

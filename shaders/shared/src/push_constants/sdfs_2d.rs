@@ -21,6 +21,7 @@ pub enum Shape {
     PlaneRay,
     Hexagon,
     Pentagon,
+    Polygon,
 }
 
 impl Shape {
@@ -44,13 +45,51 @@ impl Shape {
             Disk | Capsule | Hexagon | Pentagon | EquilateralTriangle => &[R],
             Rectangle | IsoscelesTriangle => &[W, H],
             Torus => &["Major Radius", "Minor Radius"],
-            Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment => &[],
+            Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment | Polygon => &[],
+        }
+    }
+
+    pub fn dim_range(&self) -> &[core::ops::RangeInclusive<f32>] {
+        use Shape::*;
+        match self {
+            Disk | Capsule | EquilateralTriangle | Hexagon | Pentagon => &[0.0..=0.5],
+            Rectangle => &[0.0..=1.0, 0.0..=1.0],
+            IsoscelesTriangle => &[0.0..=1.0, -0.5..=0.5],
+            Torus => &[0.0..=0.5, 0.0..=0.2],
+            Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment | Polygon => &[],
+        }
+    }
+
+    pub fn default_dims(&self) -> &[f32] {
+        use Shape::*;
+        match self {
+            Disk | Capsule | EquilateralTriangle | Hexagon | Pentagon => &[0.2],
+            Rectangle | IsoscelesTriangle => &[0.4, 0.3],
+            Torus => &[0.2, 0.1],
+            Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment | Polygon => &[],
+        }
+    }
+
+    pub fn default_points(&self) -> &[[f32; 2]] {
+        use Shape::*;
+        match self {
+            Polygon => &[
+                [0.0, 0.3],
+                [0.0, -0.3],
+                [-0.4, -0.2],
+                [0.3, 0.0],
+                [-0.4, 0.2],
+            ],
+            Triangle => &[[-0.1, -0.2], [0.3, 0.2], [0.2, -0.3]],
+            Capsule | LineSegment | PlaneSegment => &[[-0.1, -0.1], [0.2, 0.1]],
+            Ray | PlaneRay => &[[0.0, 0.0]],
+            _ => &[],
         }
     }
 
     pub fn default_params(&self) -> Params {
         let default_ps = self.default_points();
-        let mut ps = [[0.0, 0.0]; 3];
+        let mut ps = [[0.0, 0.0]; 5];
         for i in 0..default_ps.len() {
             ps[i] = default_ps[i];
         }
@@ -70,37 +109,6 @@ impl Shape {
             repeat: [Optional_f32::NONE; 2],
         }
     }
-
-    pub fn dim_range(&self) -> &[core::ops::RangeInclusive<f32>] {
-        use Shape::*;
-        match self {
-            Disk | Capsule | EquilateralTriangle | Hexagon | Pentagon => &[0.0..=0.5],
-            Rectangle => &[0.0..=1.0, 0.0..=1.0],
-            IsoscelesTriangle => &[0.0..=1.0, -0.5..=0.5],
-            Torus => &[0.0..=0.5, 0.0..=0.2],
-            Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment => &[],
-        }
-    }
-
-    pub fn default_dims(&self) -> &[f32] {
-        use Shape::*;
-        match self {
-            Disk | Capsule | EquilateralTriangle | Hexagon | Pentagon => &[0.2],
-            Rectangle | IsoscelesTriangle => &[0.4, 0.3],
-            Torus => &[0.2, 0.1],
-            Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment => &[],
-        }
-    }
-
-    pub fn default_points(&self) -> &[[f32; 2]] {
-        use Shape::*;
-        match self {
-            Triangle => &[[-0.1, -0.2], [0.3, 0.2], [0.2, -0.3]],
-            Capsule | LineSegment | PlaneSegment => &[[-0.1, -0.1], [0.2, 0.1]],
-            Ray | PlaneRay => &[[0.0, 0.0]],
-            _ => &[],
-        }
-    }
 }
 
 pub struct ShapeSpec {
@@ -113,7 +121,7 @@ pub struct ShapeSpec {
 #[repr(C)]
 pub struct Params {
     pub dims: [f32; 2],
-    pub ps: [[f32; 2]; 3],
+    pub ps: [[f32; 2]; 5],
     pub rot: f32,
     pub onion: Optional_f32,
     pub pad: Optional_f32,
