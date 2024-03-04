@@ -1,6 +1,7 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
 use crate::functional::vec::*;
+use ray_intersection::ray_intersects_sphere;
 use shared::{
     push_constants::sdfs_3d::{sdf_shape, sdf_slice, Params, ShaderConstants, Shape},
     sdf_3d::{self as sdf, ops},
@@ -195,7 +196,7 @@ pub fn main_fs(
             )
     };
 
-    let col = if (ray_march_result == RayMarchResult::DistanceTexture)
+    let mut col = if (ray_march_result == RayMarchResult::DistanceTexture)
         || (ray_march_result == RayMarchResult::Shape && ro.z > slice_z && slice_d > 0.0)
     {
         col
@@ -229,6 +230,13 @@ pub fn main_fs(
         )
         .lerp(Vec3::ONE, 1.0 - smoothstep(0.0, 0.005, slice_d.abs()))
     };
+
+    for i in 0..2 {
+        let p2: Vec3 = constants.params.ps[i].into();
+        if ray_intersects_sphere(ro, rd, p2, 0.01) {
+            col = col.lerp(Vec3::ONE, 0.2);
+        }
+    }
 
     *output = col.extend(1.0);
 }

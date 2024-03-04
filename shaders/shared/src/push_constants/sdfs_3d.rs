@@ -45,28 +45,6 @@ impl Shape {
         }
     }
 
-    pub fn default_params(&self) -> Params {
-        let default_ps = self.default_points();
-        let mut ps = [[0.0, 0.0, 0.0]; 3];
-        for i in 0..default_ps.len() {
-            ps[i] = default_ps[i];
-        }
-
-        let default_dims = self.default_dims();
-        let mut dims = [0.0; 6];
-        for i in 0..default_dims.len() {
-            dims[i] = default_dims[i];
-        }
-
-        Params {
-            dims,
-            ps,
-            onion: Optional_f32::NONE,
-            pad: Optional_f32::NONE,
-            repeat: [Optional_f32::NONE; 3],
-        }
-    }
-
     pub fn dim_range(&self) -> &[core::ops::RangeInclusive<f32>] {
         use Shape::*;
         match self {
@@ -106,9 +84,31 @@ impl Shape {
     pub fn default_points(&self) -> &[[f32; 3]] {
         use Shape::*;
         match self {
-            Capsule => &[[0.0, 0.0, -0.1], [0.1, 0.1, 0.2]],
-            Cylinder => &[[0.0, 0.0, -0.3], [0.1, 0.1, 0.3]],
+            Capsule => &[[0.0, 0.0, -0.2], [0.0, 0.0, 0.2]],
+            Cylinder => &[[0.0, 0.0, -0.3], [0.0, 0.0, 0.3]],
             _ => &[],
+        }
+    }
+
+    pub fn default_params(&self) -> Params {
+        let default_ps = self.default_points();
+        let mut ps = [[1e10; 3]; 2];
+        for i in 0..default_ps.len() {
+            ps[i] = default_ps[i];
+        }
+
+        let default_dims = self.default_dims();
+        let mut dims = [0.0; 6];
+        for i in 0..default_dims.len() {
+            dims[i] = default_dims[i];
+        }
+
+        Params {
+            dims,
+            ps,
+            onion: Optional_f32::NONE,
+            pad: Optional_f32::NONE,
+            repeat: [Optional_f32::NONE; 3],
         }
     }
 }
@@ -117,7 +117,7 @@ impl Shape {
 #[repr(C)]
 pub struct Params {
     pub dims: [f32; 6],
-    pub ps: [[f32; 3]; 3],
+    pub ps: [[f32; 3]; 2],
     pub onion: Optional_f32,
     pub pad: Optional_f32,
     pub repeat: [Optional_f32; 3],
