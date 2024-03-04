@@ -40,3 +40,14 @@ pub fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
 pub fn from_pixels(Vec2 { x, y }: Vec2, Size { width, height }: Size) -> Vec2 {
     (vec2(x, -y) - 0.5 * vec2(width as f32, -(height as f32))) / height as f32
 }
+
+macro_rules! reduce {
+    ($name:tt, $x:expr) => ( $x );
+    ($name:tt, $x:expr, $($xs:expr),+) => {
+        {
+            $name($x, reduce!($name, $($xs),+))
+        }
+    };
+}
+
+pub(crate) use reduce;

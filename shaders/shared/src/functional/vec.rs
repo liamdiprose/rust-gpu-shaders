@@ -1,7 +1,7 @@
 pub use super::traits::*;
-use crate::saturate;
+use crate::{reduce, saturate};
 use core::ops::*;
-use spirv_std::glam::{vec3, Vec2, Vec3};
+use spirv_std::glam::{Vec2, Vec3};
 
 pub trait Projection {
     fn project_onto_segment(self, rhs: Self) -> Self;
@@ -19,31 +19,36 @@ macro_rules! impl_vec {
                 self - self.project_onto_segment(rhs)
             }
         }
-    )*}
+    )+}
 }
 
 impl_vec!(Vec2 Vec3);
 
-impl Map<f32, f32> for Vec3 {
-    type Output = Self;
-    fn map<F>(self, f: F) -> Self::Output
-    where
-        F: Fn(f32) -> f32,
-    {
-        vec3(f(self.x), f(self.y), f(self.z))
+macro_rules! impl_vec_with_dimensions {
+    ($T:tt, $($d:tt)+) => {
+        impl Map<f32, f32> for $T {
+            type Output = Self;
+            fn map<F>(self, f: F) -> Self::Output
+            where
+                F: Fn(f32) -> f32,
+            {
+                $T::new($(f(self.$d)),+)
+            }
+        }
+        impl Sum for $T {
+            type Output = f32;
+            fn sum(self) -> Self::Output {
+                reduce!((f32::add), $(self.$d),+)
+            }
+        }
+        impl Product for $T {
+            type Output = f32;
+            fn product(self) -> Self::Output {
+                reduce!((f32::mul), $(self.$d),+)
+            }
+        }
     }
 }
 
-impl Sum for Vec3 {
-    type Output = f32;
-    fn sum(self) -> Self::Output {
-        self.x + self.y + self.z
-    }
-}
-
-impl Product for Vec3 {
-    type Output = f32;
-    fn product(self) -> Self::Output {
-        self.x * self.y * self.z
-    }
-}
+impl_vec_with_dimensions!(Vec2, x y);
+impl_vec_with_dimensions!(Vec3, x y z);

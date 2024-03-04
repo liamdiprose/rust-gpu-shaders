@@ -1,19 +1,11 @@
-pub use crate::functional::traits::*;
+pub use super::traits::*;
+use crate::reduce;
 use core::ops::*;
 pub use tuple::Map;
 
 macro_rules! replace_expr {
     ($_:tt $sub:tt) => {
         $sub
-    };
-}
-
-macro_rules! reduce {
-    ($name:tt, $x:expr) => ( $x );
-    ($name:tt, $x:expr, $($xs:expr),+) => {
-        {
-            $name($x, reduce!($name, $($xs),+))
-        }
     };
 }
 
