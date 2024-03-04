@@ -3,11 +3,11 @@
 use crate::functional::vec::*;
 use ray_intersection::ray_intersects_sphere;
 use shared::{
-    push_constants::sdfs_3d::{sdf_shape, sdf_slice, Params, ShaderConstants, Shape},
+    push_constants::sdfs_3d::{Params, ShaderConstants, Shape},
     sdf_3d::{self as sdf, ops},
     *,
 };
-use spirv_std::glam::{vec3, Mat3, Vec2, Vec3, Vec4, Vec4Swizzles};
+use spirv_std::glam::{vec3, Mat3, Vec2, Vec3, Vec3Swizzles, Vec4, Vec4Swizzles};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;
@@ -27,6 +27,57 @@ const YELLOW: Vec3 = vec3(1.0, 1.0, 0.0);
 const MAX_STEPS: u32 = 512;
 const MAX_DIST: f32 = 100.0;
 const SURF_DIST: f32 = 0.0002;
+
+pub fn sdf_shape(mut p: Vec3, shape: Shape, params: Params) -> f32 {
+    use Shape::*;
+
+    let dim = vec3(params.dims[0], params.dims[1], params.dims[2]);
+    let dim2 = vec3(params.dims[3], params.dims[4], params.dims[5]);
+    let p0 = params.ps[0].into();
+    let p1 = params.ps[1].into();
+    let orientation = Vec3::Y;
+
+    if params.repeat[0].has_value() {
+        p = sdf::ops::repeat_x(p, params.repeat[0].value)
+    }
+
+    if params.repeat[1].has_value() {
+        p = sdf::ops::repeat_y(p, params.repeat[1].value)
+    }
+
+    if params.repeat[2].has_value() {
+        p = sdf::ops::repeat_z(p, params.repeat[2].value)
+    }
+
+    let mut d = match shape {
+        Sphere => sdf::sphere(p, dim.x),
+        Cuboid => sdf::cuboid(p, dim),
+        CuboidFrame => sdf::cuboid_frame(p, dim, dim2),
+        CuboidFrameRadial => sdf::cuboid_frame_radial(p, dim, dim2.x),
+        Capsule => sdf::capsule(p, p0, p1, dim.x),
+        Cylinder => sdf::cylinder(p, p0, p1, dim.x),
+        Torus => sdf::torus(p, dim.xy(), orientation),
+        Disk => sdf::disk(p, dim.xy(), orientation),
+        Plane => sdf::plane(p, orientation),
+    };
+
+    if params.pad.has_value() {
+        d = sdf::ops::pad(d, params.pad.value)
+    }
+
+    if params.onion.has_value() {
+        d = sdf::ops::onion(d, params.onion.value)
+    }
+
+    d
+}
+
+pub fn sdf_slice(p: spirv_std::glam::Vec3, slice_z: f32) -> f32 {
+    crate::sdf_3d::plane(
+        p - slice_z * spirv_std::glam::Vec3::Z,
+        spirv_std::glam::Vec3::Z,
+    )
+}
 
 fn sdf_ball(p: Vec3, cursor: Vec3, cursor_d: f32) -> f32 {
     sdf::sphere(p - cursor, cursor_d)

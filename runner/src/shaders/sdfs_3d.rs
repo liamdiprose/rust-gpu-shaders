@@ -2,10 +2,10 @@ use crate::egui_components::enabled_number::EnabledNumber;
 use crate::window::UserEvent;
 use bytemuck::Zeroable;
 use egui::{Context, CursorIcon};
-use glam::{vec2, DVec3, Mat3, Vec2, Vec3};
+use glam::{vec2, Mat3, Vec2, Vec3};
 use shared::{
     from_pixels,
-    push_constants::sdfs_3d::{sdf_shape, sdf_slice, Params, ShaderConstants, Shape},
+    push_constants::sdfs_3d::{Params, ShaderConstants, Shape},
     ray_intersection::ray_intersects_sphere,
 };
 use std::{f32::consts::PI, time::Instant};
@@ -126,13 +126,13 @@ impl crate::controller::Controller for Controller {
         let cursor_3d_pos = if self.mouse_button_pressed & 1 == 1 {
             self.get_cursor_slice_pos()
         } else {
-            Vec3::ZERO
+            Vec3::MAX
         };
         self.shader_constants = ShaderConstants {
             size: self.size.into(),
             time: self.start.elapsed().as_secs_f32(),
             cursor: cursor_3d_pos.into(),
-            mouse_button_pressed: if self.drag_point.is_some() {
+            mouse_button_pressed: if self.drag_point.is_some() || cursor_3d_pos == Vec3::MAX {
                 self.mouse_button_pressed & !1
             } else {
                 self.mouse_button_pressed
@@ -210,25 +210,11 @@ impl Controller {
         let rm = Mat3::from_rotation_y(translate.x).mul_mat3(&Mat3::from_rotation_x(translate.y));
         let ro = rm.mul_vec3(-Vec3::Z);
         let rd = rm.mul_vec3(cursor.extend(1.0)).normalize();
-        let mut d0 = 0.0;
-        for _ in 0..100 {
-            let p = ro + rd * d0;
-            let ds = sdf_slice(p, self.slice_z).abs();
-            d0 += ds;
-            if d0 > 200.0 || ds < 0.000001 {
-                break;
-            }
+        let x = (self.slice_z - ro.z) / rd.z;
+        if x < 0.0 {
+            Vec3::MAX
+        } else {
+            ro + rd * x
         }
-        let mut p: DVec3 = (ro + rd * d0).into();
-        p.z = self.slice_z as f64;
-        let mut d;
-        while {
-            d = sdf_shape(p.as_vec3(), self.shape, self.params()).abs() as f64;
-            d > 1.0
-        } {
-            p = p - p.normalize() * (d - 1.0);
-            p.z = self.slice_z as f64;
-        }
-        p.as_vec3()
     }
 }

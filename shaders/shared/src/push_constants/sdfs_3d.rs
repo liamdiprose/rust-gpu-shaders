@@ -128,68 +128,11 @@ pub struct Params {
 pub struct ShaderConstants {
     pub size: Size,
     pub time: f32,
-
     pub cursor: Vec3,
     pub slice_z: f32,
     pub translate: Vec2,
-
     /// Bit mask of the pressed buttons (0 = Left, 1 = Middle, 2 = Right).
     pub mouse_button_pressed: u32,
-
-    // pub rotation: f32,
     pub shape: u32,
     pub params: Params,
-}
-
-pub fn sdf_shape(mut p: spirv_std::glam::Vec3, shape: Shape, params: Params) -> f32 {
-    use crate::sdf_3d as sdf;
-    use spirv_std::glam::{self, Vec3Swizzles};
-    use Shape::*;
-
-    let dim = glam::vec3(params.dims[0], params.dims[1], params.dims[2]);
-    let dim2 = glam::vec3(params.dims[3], params.dims[4], params.dims[5]);
-    let p0 = params.ps[0].into();
-    let p1 = params.ps[1].into();
-    let orientation = glam::Vec3::Y;
-
-    if params.repeat[0].has_value() {
-        p = sdf::ops::repeat_x(p, params.repeat[0].value)
-    }
-
-    if params.repeat[1].has_value() {
-        p = sdf::ops::repeat_y(p, params.repeat[1].value)
-    }
-
-    if params.repeat[2].has_value() {
-        p = sdf::ops::repeat_z(p, params.repeat[2].value)
-    }
-
-    let mut d = match shape {
-        Sphere => sdf::sphere(p, dim.x),
-        Cuboid => sdf::cuboid(p, dim),
-        CuboidFrame => sdf::cuboid_frame(p, dim, dim2),
-        CuboidFrameRadial => sdf::cuboid_frame_radial(p, dim, dim2.x),
-        Capsule => sdf::capsule(p, p0, p1, dim.x),
-        Cylinder => sdf::cylinder(p, p0, p1, dim.x),
-        Torus => sdf::torus(p, dim.xy(), orientation),
-        Disk => sdf::disk(p, dim.xy(), orientation),
-        Plane => sdf::plane(p, orientation),
-    };
-
-    if params.pad.has_value() {
-        d = sdf::ops::pad(d, params.pad.value)
-    }
-
-    if params.onion.has_value() {
-        d = sdf::ops::onion(d, params.onion.value)
-    }
-
-    d
-}
-
-pub fn sdf_slice(p: spirv_std::glam::Vec3, slice_z: f32) -> f32 {
-    crate::sdf_3d::plane(
-        p - slice_z * spirv_std::glam::Vec3::Z,
-        spirv_std::glam::Vec3::Z,
-    )
 }
