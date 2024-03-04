@@ -28,4 +28,13 @@ impl Optional_f32 {
     pub fn has_value(self) -> bool {
         self.value != Self::NONE_VALUE
     }
+
+    #[inline(always)]
+    pub fn value_or(self, fallback: f32) -> f32 {
+        if self.has_value() {
+            self.value
+        } else {
+            fallback
+        }
+    }
 }
