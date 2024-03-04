@@ -34,8 +34,8 @@ fn sdf(mut p: Vec2, shape: u32, params: Params) -> f32 {
         PlaneSegment => sdf::plane_segment(p, p0, p1),
         Ray => sdf::ray(p - p0, Vec2::X),
         PlaneRay => sdf::plane_ray(p - p0, Vec2::X),
-        Hexagon => sdf::hexagon(p - p0, radius),
-        Pentagon => sdf::pentagon(p - p0, radius),
+        Hexagon => sdf::hexagon(p, radius),
+        Pentagon => sdf::pentagon(p, radius),
         Polygon => sdf::polygon(p, [p0, p1, p2, p3, p4]),
         Cross => sdf::cross(p, dim),
     };
@@ -86,7 +86,7 @@ pub fn main_fs(
     let uv = from_pixels(frag_coord.xy(), constants.size);
     let cursor = from_pixels(constants.cursor.into(), constants.size);
 
-    let col = {
+    let mut col = {
         let d = sdf(uv, constants.shape, constants.params);
 
         let mut col = if d < 0.0 {
@@ -118,6 +118,16 @@ pub fn main_fs(
 
         col
     };
+
+    let ps = constants.params.ps;
+    let thickness = 10.0 / constants.size.height as f32;
+    for i in 0..5 {
+        let p: Vec2 = ps[i].into();
+        col = col.lerp(
+            vec3(1.0, 1.0, 1.0),
+            smoothstep(thickness, 0.0, sdf::disk(uv - p, 0.002)),
+        )
+    }
 
     *output = col.extend(1.0);
 }

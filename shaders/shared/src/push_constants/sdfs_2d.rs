@@ -93,7 +93,7 @@ impl Shape {
 
     pub fn default_params(&self) -> Params {
         let default_ps = self.default_points();
-        let mut ps = [[0.0, 0.0]; 5];
+        let mut ps = [[1e10; 2]; 5];
         for i in 0..default_ps.len() {
             ps[i] = default_ps[i];
         }
