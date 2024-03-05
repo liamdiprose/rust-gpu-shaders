@@ -1,4 +1,4 @@
-use spirv_std::glam::{vec2, Vec2};
+use spirv_std::glam::{vec2, IVec2, Vec2, Vec2Swizzles};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 
@@ -39,4 +39,12 @@ pub fn repeat_mirrored_y(p: Vec2, s: f32) -> Vec2 {
     let id = (p.y / s).round();
     let r = p.y - s * id;
     vec2(p.x, if (id as i32 & 1) == 0 { r } else { -r })
+}
+
+// the sdf must be symmetric with respect to the tile boundaries
+pub fn repeat_rectangular(mut p: Vec2, size: IVec2, s: f32) -> Vec2 {
+    p = (p / s).abs() - (size.as_vec2() * 0.5 - 0.5);
+    p = if p.x < p.y { p.yx() } else { p };
+    p.y -= p.y.round().min(0.0);
+    p * s
 }
