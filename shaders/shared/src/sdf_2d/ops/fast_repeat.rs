@@ -48,3 +48,24 @@ pub fn repeat_rectangular(mut p: Vec2, size: IVec2, s: f32) -> Vec2 {
     p.y -= p.y.round().min(0.0);
     p * s
 }
+
+// the sdf must be symmetric with respect to the tile boundaries
+pub fn repeat_limited(p: Vec2, s: f32, lima: IVec2, limb: IVec2) -> Vec2 {
+    p - s * (p / s).round().clamp(-lima.as_vec2(), limb.as_vec2())
+}
+
+// the sdf must be symmetric with respect to the tile boundaries
+pub fn repeat_x_limited(p: Vec2, s: f32, lima: i32, limb: i32) -> Vec2 {
+    vec2(
+        p.x - s * (p.x / s).round().clamp(-lima as f32, limb as f32),
+        p.y,
+    )
+}
+
+// the sdf must be symmetric with respect to the tile boundaries
+pub fn repeat_y_limited(p: Vec2, s: f32, lima: i32, limb: i32) -> Vec2 {
+    vec2(
+        p.x,
+        p.y - s * (p.y / s).round().clamp(-lima as f32, limb as f32),
+    )
+}
