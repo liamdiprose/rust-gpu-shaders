@@ -13,6 +13,7 @@ pub mod sdfs_3d;
 pub mod sierpinski_triangle;
 pub mod spherical_harmonics;
 pub mod spherical_harmonics_shape;
+pub mod fun_rep_demo;
 
 pub fn largest_size() -> usize {
     use core::mem::size_of;
@@ -68,6 +69,25 @@ impl From<glam::Vec2> for Vec2 {
 impl Into<glam::Vec2> for Vec2 {
     fn into(self) -> glam::Vec2 {
         glam::vec2(self.x, self.y)
+    }
+}
+
+#[derive(Copy, Clone, Pod, Zeroable)]
+#[repr(C)]
+pub struct UVec2 {
+    pub x: u32,
+    pub y: u32,
+}
+
+impl From<glam::UVec2> for UVec2 {
+    fn from(glam::UVec2 { x, y }: glam::UVec2) -> Self {
+        Self { x, y }
+    }
+}
+
+impl Into<glam::UVec2> for UVec2 {
+    fn into(self) -> glam::UVec2 {
+        glam::UVec2::new(self.x, self.y)
     }
 }
 

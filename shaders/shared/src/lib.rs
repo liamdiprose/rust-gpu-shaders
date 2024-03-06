@@ -6,6 +6,7 @@ pub mod complex;
 pub mod fast_optional;
 pub mod functional;
 pub mod voronoi;
+pub mod interpreter;
 pub mod numeric_integration;
 pub mod push_constants;
 pub mod random;
