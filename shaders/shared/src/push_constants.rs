@@ -14,6 +14,7 @@ pub mod sierpinski_triangle;
 pub mod spherical_harmonics;
 pub mod spherical_harmonics_shape;
 pub mod fun_rep_demo;
+pub mod sdfs_pixel_grid;
 
 pub fn largest_size() -> usize {
     use core::mem::size_of;
