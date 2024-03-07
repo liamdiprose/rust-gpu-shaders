@@ -1,6 +1,10 @@
+use crate::controller::BufferData;
 use bytemuck::Zeroable;
 use glam::{vec2, Vec2};
-use shared::push_constants::fun_rep_demo::ShaderConstants;
+use shared::{
+    interpreter::{OpCode0, OpCodeStruct},
+    push_constants::fun_rep_demo::{ShaderConstants, MAX_NUM_OPS},
+};
 use std::time::{Duration, Instant};
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
@@ -17,10 +21,14 @@ pub struct Controller {
     drag_point: Option<usize>,
     shader_constants: ShaderConstants,
     zoom: f32,
+    buffer: Vec<OpCodeStruct>,
 }
 
 impl crate::controller::Controller for Controller {
     fn new(size: PhysicalSize<u32>) -> Self {
+        let mut ops: Vec<OpCodeStruct> = sdf().iter().map(|op| (*op).into()).collect();
+        ops.resize(MAX_NUM_OPS, OpCodeStruct::zeroed());
+
         Self {
             size,
             start: Instant::now(),
@@ -31,6 +39,7 @@ impl crate::controller::Controller for Controller {
             drag_point: None,
             shader_constants: ShaderConstants::zeroed(),
             zoom: 1.0,
+            buffer: ops,
         }
     }
 
@@ -86,7 +95,7 @@ impl crate::controller::Controller for Controller {
             cursor: self.cursor.into(),
             mouse_button_pressed: !(1
                 << (self.mouse_button_pressed && self.drag_point.is_none()) as u32),
-            num_ops: crate::sdfs_2d::sdf().len()as u32,
+            num_ops: sdf().len() as u32,
             zoom: self.zoom,
         };
     }
@@ -98,4 +107,27 @@ impl crate::controller::Controller for Controller {
     fn has_ui(&self) -> bool {
         false
     }
+
+    fn buffers(&self) -> BufferData {
+        BufferData {
+            uniform: Some(bytemuck::cast_slice(&self.buffer)),
+            ..Default::default()
+        }
+    }
+}
+
+fn length() -> Vec<OpCode0> {
+    use OpCode0::*;
+    vec![Pushx, Square, Pushy, Square, Add, Sqrt]
+}
+
+fn disk(r: f32) -> Vec<OpCode0> {
+    use OpCode0::*;
+    let mut vec = length();
+    vec.extend(vec![Push(r), Sub]);
+    vec
+}
+
+fn sdf() -> Vec<OpCode0> {
+    disk(0.3)
 }

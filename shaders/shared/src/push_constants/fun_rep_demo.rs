@@ -1,6 +1,8 @@
 use super::{Size, Vec2};
 use bytemuck::{Pod, Zeroable};
 
+pub const MAX_NUM_OPS: usize = 1024;
+
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
 pub struct ShaderConstants {

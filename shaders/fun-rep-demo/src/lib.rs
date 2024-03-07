@@ -1,6 +1,6 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
-use push_constants::fun_rep_demo::ShaderConstants;
+use push_constants::fun_rep_demo::{ShaderConstants, MAX_NUM_OPS};
 use shared::interpreter::{Interpreter, OpCodeStruct};
 use shared::sdf_2d as sdf;
 use shared::*;
@@ -9,8 +9,9 @@ use spirv_std::glam::{vec3, Vec2, Vec3, Vec4, Vec4Swizzles};
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;
 
-fn sdf(p: Vec2, ops: &[OpCodeStruct; 256], n: u32) -> f32 {
-    let mut interpreter = Interpreter::new(p);
+fn sdf(p: Vec2, ops: &[OpCodeStruct; MAX_NUM_OPS], n: u32) -> f32 {
+    const STACK_SIZE: usize = 8;
+    let mut interpreter = Interpreter::<STACK_SIZE, MAX_NUM_OPS>::new(p);
     interpreter.interpret(ops, n as usize)
 }
 
@@ -18,7 +19,7 @@ fn sdf(p: Vec2, ops: &[OpCodeStruct; 256], n: u32) -> f32 {
 pub fn main_fs(
     #[spirv(frag_coord)] frag_coord: Vec4,
     #[spirv(push_constant)] constants: &ShaderConstants,
-    #[spirv(uniform, descriptor_set = 0, binding = 0)] ops: &[OpCodeStruct; 256],
+    #[spirv(uniform, descriptor_set = 0, binding = 0)] ops: &[OpCodeStruct; MAX_NUM_OPS],
     output: &mut Vec4,
 ) {
     let uv = constants.zoom * from_pixels(frag_coord.xy(), constants.size);

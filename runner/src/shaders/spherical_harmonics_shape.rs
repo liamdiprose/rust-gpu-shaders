@@ -1,4 +1,4 @@
-use crate::{camera::RotationCamera, model::Vertex, window::UserEvent};
+use crate::{camera::RotationCamera, controller::BufferData, model::Vertex, window::UserEvent};
 use bytemuck::Zeroable;
 use egui::{Color32, Context, Rect, RichText, Sense, Stroke, Ui};
 use glam::{vec2, vec3, Vec2};
@@ -206,8 +206,13 @@ impl crate::controller::Controller for Controller {
         ui.advance_cursor_after_rect(rect);
     }
 
-    fn buffers(&self) -> Option<(&[Vertex], &[u32])> {
-        Some((self.buffers.0.as_slice(), self.buffers.1.as_slice()))
+    fn buffers(&self) -> BufferData<'_> {
+        BufferData {
+            vertex: Some(self.buffers.0.as_slice()),
+            index: Some(self.buffers.1.as_slice()),
+            use_depth_buffer: true,
+            ..Default::default()
+        }
     }
 }
 
