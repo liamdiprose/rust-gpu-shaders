@@ -9,7 +9,6 @@ license.workspace = true
 [dependencies]
 spirv-std = { workspace = true }
 bytemuck = { version = "1.6.3", features = ["derive"] }
-tuple = { version = "0.5.1", default-features = false }
 
 [target.'cfg(not(any(target_arch = "spirv")))'.dependencies]
 strum = { version = "0.25.0", features = ["derive"] }

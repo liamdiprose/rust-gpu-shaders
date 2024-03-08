@@ -1,7 +1,6 @@
 pub use super::traits::*;
 use crate::reduce;
 use core::ops::*;
-pub use tuple::Map;
 
 macro_rules! replace_expr {
     ($_:tt $sub:tt) => {
@@ -43,6 +42,15 @@ macro_rules! tuple_impls {
             type Output = ($(replace_expr!($idx (T, T)),)+);
             fn zip(self, other: Self) -> Self::Output {
                  ($((self.$idx, other.$idx)),+,)
+            }
+        }
+        impl<T, U> Map<T, U> for ($(replace_expr!($idx T),)+) {
+            type Output = ($(replace_expr!($idx U),)+);
+            fn map<F>(self, f: F) -> Self::Output
+            where
+                F: Fn(T) -> U,
+            {
+                ($(f(self.$idx)),+,)
             }
         }
     }
