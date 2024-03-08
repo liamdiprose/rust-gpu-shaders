@@ -27,7 +27,7 @@ impl crate::controller::Controller for Controller {
     }
 
     fn resize(&mut self, size: PhysicalSize<u32>) {
-        self.size = size
+        self.size = size;
     }
 
     fn update(&mut self) {

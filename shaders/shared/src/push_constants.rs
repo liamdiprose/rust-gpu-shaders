@@ -220,6 +220,6 @@ impl From<bool> for Bool {
 
 impl Into<bool> for Bool {
     fn into(self) -> bool {
-        self.value > 0
+        self.value != 0
     }
 }

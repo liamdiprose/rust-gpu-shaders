@@ -1,17 +1,24 @@
-use super::{Size, Vec2, Bool};
+use super::{Bool, Size, Vec2};
 use crate::functional::tuple::*;
 use bytemuck::{Pod, Zeroable};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 
-pub const NUM_Y: usize = 32;
-pub const NUM_X: usize = NUM_Y * 2;
+// Only need padding of 2 but Gridchunk is size 4 so this simplifies things
+pub const SMOOTH_PADDING: usize = 4;
+pub const BASE: usize = 64;
+pub const NUM_Y: usize = BASE + SMOOTH_PADDING;
+pub const NUM_X: usize = BASE * 3 + SMOOTH_PADDING;
 
-#[derive(Clone, Copy, Pod, Zeroable)]
+#[derive(Clone, Copy)]
 #[repr(C)]
 pub struct Grid {
     pub grid: [[GridChunk; NUM_Y / 4]; NUM_X],
 }
+
+// Not deriving because not all array sizes are implemented
+unsafe impl Zeroable for Grid {}
+unsafe impl Pod for Grid {}
 
 impl Grid {
     #[cfg(not(target_arch = "spirv"))]
@@ -24,9 +31,8 @@ impl Grid {
     }
 
     fn indices_from_vec2(&self, p: spirv_std::glam::Vec2) -> spirv_std::glam::Vec2 {
-        let i = ((p.x + 0.5 * NUM_X as f32 / NUM_Y as f32) * NUM_Y as f32)
-            .clamp(0.0, (NUM_X - 1) as f32);
-        let j = (p.y + 0.5) * NUM_Y as f32;
+        let i = (p.x + 0.5 * NUM_X as f32 / BASE as f32) * BASE as f32;
+        let j = (p.y + 0.5) * BASE as f32 + (0.5 * SMOOTH_PADDING as f32);
         spirv_std::glam::vec2(i, j)
     }
 
@@ -66,7 +72,8 @@ impl GridChunk {
             0 => self.x0,
             1 => self.x1,
             2 => self.x2,
-            _ => self.x3,
+            3 => self.x3,
+            _ => panic!(),
         }
     }
 }
