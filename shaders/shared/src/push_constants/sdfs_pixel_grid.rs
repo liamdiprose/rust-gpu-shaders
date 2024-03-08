@@ -6,9 +6,9 @@ use spirv_std::num_traits::Float;
 
 // Only need padding of 2 but Gridchunk is size 4 so this simplifies things
 pub const SMOOTH_PADDING: usize = 4;
-pub const BASE: usize = 64;
+pub const BASE: usize = 32 - SMOOTH_PADDING;
 pub const NUM_Y: usize = BASE + SMOOTH_PADDING;
-pub const NUM_X: usize = BASE * 3 + SMOOTH_PADDING;
+pub const NUM_X: usize = (BASE + SMOOTH_PADDING) * 3 + SMOOTH_PADDING;
 
 #[derive(Clone, Copy)]
 #[repr(C)]
@@ -16,16 +16,20 @@ pub struct Grid {
     pub grid: [[GridChunk; NUM_Y / 4]; NUM_X],
 }
 
-// Not deriving because not all array sizes are implemented
-unsafe impl Zeroable for Grid {}
-unsafe impl Pod for Grid {}
-
+#[cfg(not(target_arch = "spirv"))]
 impl Grid {
-    #[cfg(not(target_arch = "spirv"))]
     pub fn set(&mut self, i: usize, j: usize, value: f32) {
         self.grid[i][j / 4][j % 4] = value;
     }
 
+    pub fn new() -> Self {
+        Self {
+            grid: [[GridChunk::zeroed(); NUM_Y / 4]; NUM_X],
+        }
+    }
+}
+
+impl Grid {
     pub fn get(&self, i: usize, j: usize) -> f32 {
         self.grid[i][j / 4].index(j % 4)
     }
