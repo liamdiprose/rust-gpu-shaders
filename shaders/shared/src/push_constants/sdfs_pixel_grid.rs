@@ -1,4 +1,4 @@
-use super::{Size, Vec2};
+use super::{Size, Vec2, Bool};
 use crate::functional::tuple::*;
 use bytemuck::{Pod, Zeroable};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
@@ -107,4 +107,5 @@ pub struct ShaderConstants {
     /// Bit mask of the pressed buttons (0 = Left, 1 = Middle, 2 = Right).
     pub mouse_button_pressed: u32,
     pub zoom: f32,
+    pub smooth: Bool,
 }
