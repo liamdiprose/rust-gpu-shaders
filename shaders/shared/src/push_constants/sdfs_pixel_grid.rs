@@ -10,7 +10,6 @@ pub const BASE: usize = 32 - SMOOTH_PADDING;
 pub const NUM_Y: usize = BASE + SMOOTH_PADDING;
 pub const NUM_X: usize = (BASE + SMOOTH_PADDING) * 3 + SMOOTH_PADDING;
 
-#[derive(Clone, Copy)]
 #[repr(C)]
 pub struct Grid {
     pub grid: [[GridChunk; NUM_Y / 4]; NUM_X],
@@ -35,8 +34,8 @@ impl Grid {
     }
 
     fn indices_from_vec2(&self, p: spirv_std::glam::Vec2) -> spirv_std::glam::Vec2 {
-        let i = (p.x + 0.5 * NUM_X as f32 / BASE as f32) * BASE as f32;
-        let j = (p.y + 0.5) * BASE as f32 + (0.5 * SMOOTH_PADDING as f32);
+        let i = p.x * BASE as f32 + 0.5 * NUM_X as f32;
+        let j = (p.y + 0.5) * BASE as f32 + 0.5 * SMOOTH_PADDING as f32;
         spirv_std::glam::vec2(i, j)
     }
 

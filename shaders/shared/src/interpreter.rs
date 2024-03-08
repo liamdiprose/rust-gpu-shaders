@@ -115,19 +115,19 @@ impl<const N: usize> Stack<N> {
     }
 }
 
-pub struct Interpreter<const STACK_SIZE: usize, const MAX_NUM_OPS: usize> {
+pub struct Interpreter<const STACK_SIZE: usize> {
     stack: Stack<STACK_SIZE>,
     p: Vec2,
 }
 
-impl<const STACK_SIZE: usize, const MAX_NUM_OPS: usize> Interpreter<STACK_SIZE, MAX_NUM_OPS> {
+impl<const STACK_SIZE: usize> Interpreter<STACK_SIZE> {
     pub fn new(p: Vec2) -> Self {
         Self {
             stack: Stack::<STACK_SIZE>::new(),
             p,
         }
     }
-    pub fn interpret(&mut self, ops: &[OpCodeStruct; MAX_NUM_OPS], n: usize) -> f32 {
+    pub fn interpret(&mut self, ops: &[OpCodeStruct], n: usize) -> f32 {
         for i in 0..n {
             let ocs = ops[i];
             let op = OpCode::from_u32(ocs.op);
@@ -211,15 +211,11 @@ mod tests {
     #[test]
     fn test_disk() {
         const STACK_SIZE: usize = 8;
-        const MAX_NUM_OPS: usize = 8;
         let p = vec2(0.9, 0.2);
         let r = 0.3;
-        let mut interpreter = Interpreter::<STACK_SIZE, MAX_NUM_OPS>::new(p);
-        let mut ops: Vec<OpCodeStruct> = disk(r).iter().map(|op| (*op).into()).collect();
-        let n = ops.len();
-        ops.resize(MAX_NUM_OPS, OpCodeStruct::zeroed());
-        let arr: [OpCodeStruct; MAX_NUM_OPS] = ops.as_slice().try_into().unwrap();
-        let d = interpreter.interpret(&arr, n);
+        let mut interpreter = Interpreter::<STACK_SIZE>::new(p);
+        let ops: Vec<OpCodeStruct> = disk(r).iter().map(|op| (*op).into()).collect();
+        let d = interpreter.interpret(&ops.as_slice(), ops.len());
         assert_eq!(d, crate::sdf_2d::disk(p, r))
     }
 }

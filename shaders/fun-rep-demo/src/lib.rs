@@ -1,6 +1,6 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
-use push_constants::fun_rep_demo::{ShaderConstants, MAX_NUM_OPS};
+use push_constants::fun_rep_demo::ShaderConstants;
 use shared::interpreter::{Interpreter, OpCodeStruct};
 use shared::sdf_2d as sdf;
 use shared::*;
@@ -9,24 +9,24 @@ use spirv_std::glam::{vec3, Vec2, Vec3, Vec4, Vec4Swizzles};
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;
 
-fn sdf(p: Vec2, ops: &[OpCodeStruct; MAX_NUM_OPS], n: u32) -> f32 {
+fn sdf(p: Vec2, ops: &[OpCodeStruct]) -> f32 {
     const STACK_SIZE: usize = 8;
-    let mut interpreter = Interpreter::<STACK_SIZE, MAX_NUM_OPS>::new(p);
-    interpreter.interpret(ops, n as usize)
+    let mut interpreter = Interpreter::<STACK_SIZE>::new(p);
+    interpreter.interpret(ops, ops.len())
 }
 
 #[spirv(fragment)]
 pub fn main_fs(
     #[spirv(frag_coord)] frag_coord: Vec4,
     #[spirv(push_constant)] constants: &ShaderConstants,
-    #[spirv(uniform, descriptor_set = 0, binding = 0)] ops: &[OpCodeStruct; MAX_NUM_OPS],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] ops: &[OpCodeStruct],
     output: &mut Vec4,
 ) {
     let uv = constants.zoom * from_pixels(frag_coord.xy(), constants.size);
     let cursor = constants.zoom * from_pixels(constants.cursor.into(), constants.size);
 
     let col = {
-        let d = sdf(uv, ops, constants.num_ops);
+        let d = sdf(uv, ops);
 
         let mut col = if d < 0.0 {
             vec3(0.65, 0.85, 1.0)
@@ -38,7 +38,7 @@ pub fn main_fs(
         col = col.lerp(Vec3::ONE, 1.0 - smoothstep(0.0, 0.01, d.abs()));
 
         if constants.mouse_button_pressed & 1 != 0 {
-            let d = sdf(cursor, ops, constants.num_ops);
+            let d = sdf(cursor, ops);
             let thickness = 1.0 / constants.size.height as f32;
             col = col
                 .lerp(

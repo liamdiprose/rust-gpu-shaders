@@ -1,9 +1,9 @@
-use crate::controller::{BindGroupBufferType, BufferData, Uniform};
+use crate::controller::{BindGroupBufferType, BufferData, SSBO};
 use bytemuck::Zeroable;
 use glam::{vec2, Vec2};
 use shared::{
     interpreter::{OpCode0, OpCodeStruct},
-    push_constants::fun_rep_demo::{ShaderConstants, MAX_NUM_OPS},
+    push_constants::fun_rep_demo::ShaderConstants,
 };
 use std::time::{Duration, Instant};
 use winit::{
@@ -26,8 +26,7 @@ pub struct Controller {
 
 impl crate::controller::Controller for Controller {
     fn new(size: PhysicalSize<u32>) -> Self {
-        let mut ops: Vec<OpCodeStruct> = sdf().iter().map(|op| (*op).into()).collect();
-        ops.resize(MAX_NUM_OPS, OpCodeStruct::zeroed());
+        let ops: Vec<OpCodeStruct> = sdf().iter().map(|op| (*op).into()).collect();
 
         Self {
             size,
@@ -95,7 +94,6 @@ impl crate::controller::Controller for Controller {
             cursor: self.cursor.into(),
             mouse_button_pressed: !(1
                 << (self.mouse_button_pressed && self.drag_point.is_none()) as u32),
-            num_ops: sdf().len() as u32,
             zoom: self.zoom,
         };
     }
@@ -110,8 +108,9 @@ impl crate::controller::Controller for Controller {
 
     fn buffers(&self) -> BufferData {
         BufferData {
-            bind_group_buffers: vec![BindGroupBufferType::Uniform(Uniform {
+            bind_group_buffers: vec![BindGroupBufferType::SSBO(SSBO {
                 data: bytemuck::cast_slice(&self.buffer),
+                read_only: true,
             })],
             ..Default::default()
         }
