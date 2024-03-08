@@ -1,4 +1,4 @@
-use crate::controller::BufferData;
+use crate::controller::{BindGroupBufferType, BufferData, Uniform};
 use bytemuck::Zeroable;
 use glam::{vec2, Vec2};
 use shared::{
@@ -110,7 +110,9 @@ impl crate::controller::Controller for Controller {
 
     fn buffers(&self) -> BufferData {
         BufferData {
-            uniform: Some(bytemuck::cast_slice(&self.buffer)),
+            bind_group_buffers: vec![BindGroupBufferType::Uniform(Uniform {
+                data: bytemuck::cast_slice(&self.buffer),
+            })],
             ..Default::default()
         }
     }
