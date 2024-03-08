@@ -1,10 +1,55 @@
 use super::{Size, Vec2};
+use crate::functional::tuple::*;
 use bytemuck::{Pod, Zeroable};
-use core::ops::{Index, IndexMut};
+#[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
+use spirv_std::num_traits::Float;
 
-pub const NUM_Y: usize = 8;
-pub const NUM_X: usize = 16;
-pub type Grid = [[GridChunk; NUM_Y / 4]; NUM_X];
+pub const NUM_Y: usize = 32;
+pub const NUM_X: usize = NUM_Y * 2;
+
+#[derive(Clone, Copy, Pod, Zeroable)]
+#[repr(C)]
+pub struct Grid {
+    pub grid: [[GridChunk; NUM_Y / 4]; NUM_X],
+}
+
+impl Grid {
+    #[cfg(not(target_arch = "spirv"))]
+    pub fn set(&mut self, i: usize, j: usize, value: f32) {
+        self.grid[i][j / 4][j % 4] = value;
+    }
+
+    pub fn get(&self, i: usize, j: usize) -> f32 {
+        self.grid[i][j / 4].index(j % 4)
+    }
+
+    fn indices_from_vec2(&self, p: spirv_std::glam::Vec2) -> spirv_std::glam::Vec2 {
+        let i = ((p.x + 0.5 * NUM_X as f32 / NUM_Y as f32) * NUM_Y as f32)
+            .clamp(0.0, (NUM_X - 1) as f32);
+        let j = (p.y + 0.5) * NUM_Y as f32;
+        spirv_std::glam::vec2(i, j)
+    }
+
+    pub fn from_vec2(&self, p: spirv_std::glam::Vec2) -> f32 {
+        let ij = self.indices_from_vec2(p);
+        self.get(ij.x as usize, ij.y as usize)
+    }
+
+    pub fn from_vec2_smooth(&self, p: spirv_std::glam::Vec2) -> f32 {
+        let ij = self.indices_from_vec2(p);
+        let indices_and_scalars = |x: f32| {
+            (
+                ((x - 0.5) as usize, (0.5 - x.fract()).max(0.0)),
+                (x as usize, 0.5 + ((x - 0.5).fract() - 0.5).abs()),
+                ((x + 0.5) as usize, (x.fract() - 0.5).max(0.0)),
+            )
+        };
+        indices_and_scalars(ij.x)
+            .map(|a| indices_and_scalars(ij.y).map(|b| (a, b)))
+            .map(|a| a.map(|((i, s1), (j, s2))| s1 * s2 * self.get(i, j)).sum())
+            .sum()
+    }
+}
 
 #[derive(Clone, Copy, Pod, Zeroable)]
 #[repr(C)]
@@ -26,7 +71,8 @@ impl GridChunk {
     }
 }
 
-impl Index<usize> for GridChunk {
+#[cfg(not(target_arch = "spirv"))]
+impl core::ops::Index<usize> for GridChunk {
     type Output = f32;
     fn index(&self, index: usize) -> &Self::Output {
         match index {
@@ -40,7 +86,7 @@ impl Index<usize> for GridChunk {
 }
 
 #[cfg(not(target_arch = "spirv"))]
-impl IndexMut<usize> for GridChunk {
+impl core::ops::IndexMut<usize> for GridChunk {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         match index {
             0 => &mut self.x0,

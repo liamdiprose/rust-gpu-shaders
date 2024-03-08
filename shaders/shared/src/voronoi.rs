@@ -1,7 +1,5 @@
 use crate::random::*;
 use spirv_std::glam::{vec2, vec3, Vec2, Vec3};
-#[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
-use spirv_std::num_traits::Float;
 
 pub fn voronoi(p: Vec2) -> Vec3 {
     let ip = p.floor();
