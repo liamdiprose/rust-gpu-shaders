@@ -1,6 +1,7 @@
 pub use super::traits::*;
 use crate::reduce;
 use core::ops::*;
+use spirv_std::glam::{Vec2, Vec3};
 
 macro_rules! replace_expr {
     ($_:tt $sub:tt) => {
@@ -51,6 +52,25 @@ macro_rules! tuple_impls {
                 F: Fn(T) -> U,
             {
                 ($(f(self.$idx)),+,)
+            }
+        }
+        impl<T> Prepend<T> for ($(replace_expr!($idx T),)+)
+        {
+            type Output = (T, $(replace_expr!($idx T),)+);
+            fn prepend(self, value: T) -> Self::Output {
+                (value, $(self.$idx),+)
+            }
+        }
+        impl MinLength for ($(replace_expr!($idx Vec2),)+)
+        {
+            fn min_length(self) -> f32 {
+                self.map(Vec2::length_squared).min_element().sqrt()
+            }
+        }
+        impl MinLength for ($(replace_expr!($idx Vec3),)+)
+        {
+            fn min_length(self) -> f32 {
+                self.map(Vec3::length_squared).min_element().sqrt()
             }
         }
     }

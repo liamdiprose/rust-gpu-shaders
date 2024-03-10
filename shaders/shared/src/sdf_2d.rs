@@ -75,8 +75,7 @@ pub fn isosceles_triangle(mut p: Vec2, mut dim: Vec2) -> f32 {
     let a = p.reject_from_segment(dim);
     let b = p - vec2(p.x.min(dim.x), dim.y);
     let s = dim.y.signum();
-    (a, b).map(Vec2::length_squared).min_element().sqrt()
-        * (s * p.perp_dot(dim)).max(s * (p.y - dim.y)).signum()
+    (a, b).min_length() * (s * p.perp_dot(dim)).max(s * (p.y - dim.y)).signum()
 }
 
 pub fn triangle(p: Vec2, p0: Vec2, p1: Vec2, p2: Vec2) -> f32 {
@@ -88,10 +87,9 @@ pub fn triangle(p: Vec2, p0: Vec2, p1: Vec2, p2: Vec2) -> f32 {
         -ew.map(|(e, w)| s * w.perp_dot(e)).min_element().signum()
     };
     sgn * ew
-        .map(|(e, w)| w.reject_from_segment(e).length_squared())
-        .min_element()
-        .min((p - p0).length_squared())
-        .sqrt()
+        .map(|(e, w)| w.reject_from_segment(e))
+        .prepend(p - p0)
+        .min_length()
 }
 
 pub fn polygon<const N: usize>(p: Vec2, ps: [Vec2; N]) -> f32 {

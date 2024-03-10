@@ -30,3 +30,12 @@ pub trait Map<T, U> {
         F: Fn(T) -> U,
         T: Copy;
 }
+
+pub trait Prepend<T> {
+    type Output;
+    fn prepend(self, value: T) -> Self::Output;
+}
+
+pub trait MinLength {
+    fn min_length(self) -> f32;
+}

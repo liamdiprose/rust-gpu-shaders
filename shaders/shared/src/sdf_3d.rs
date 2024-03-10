@@ -62,9 +62,7 @@ pub fn cuboid_frame_radial(p: Vec3, dim: Vec3, r: f32) -> f32 {
         vec3(v.x, v.y.max(0.0), v.z),
         vec3(v.x.max(0.0), v.y, v.z),
     )
-        .map(|v| v.length_squared())
-        .min_element()
-        .sqrt()
+        .min_length()
         - r
 }
 
