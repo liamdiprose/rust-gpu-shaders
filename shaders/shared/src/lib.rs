@@ -18,7 +18,7 @@ pub mod spherical_harmonics;
 use push_constants::Size;
 use spirv_std::glam::{vec2, Vec2, Vec4};
 
-pub const SQRT_3: f32 = 1.732050807568877293527446341505872367;
+pub const SQRT_3: f32 = 1.7320508075688772;
 pub use core::f32::consts::PI;
 
 pub fn fullscreen_vs(vert_id: i32, out_pos: &mut Vec4) {
