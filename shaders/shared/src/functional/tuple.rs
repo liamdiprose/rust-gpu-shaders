@@ -2,6 +2,8 @@ pub use super::traits::*;
 use crate::reduce;
 use core::ops::*;
 use spirv_std::glam::{Vec2, Vec3};
+#[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
+use spirv_std::num_traits::Float;
 
 macro_rules! replace_expr {
     ($_:tt $sub:tt) => {

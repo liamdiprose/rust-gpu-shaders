@@ -1,8 +1,18 @@
-use crate::{egui_components::enabled_number::EnabledNumber, window::UserEvent};
+use crate::{
+    controller::{BindGroupBufferType, BufferData, SSBO},
+    egui_components::{
+        enabled_number::EnabledNumber,
+        repetition::{Repetition, RepetitionValue},
+    },
+    window::UserEvent,
+};
 use bytemuck::Zeroable;
 use egui::{Context, CursorIcon};
-use glam::{vec2, Vec2};
-use shared::push_constants::sdfs_2d::{Params, ShaderConstants, Shape};
+use glam::{vec2, UVec2, Vec2};
+use sdf::grid::*;
+use shared::fast_optional::Optional_f32;
+use shared::push_constants::sdfs_2d::ShaderConstants;
+use shared::sdf_2d as sdf;
 use std::{
     f32::consts::PI,
     time::{Duration, Instant},
@@ -14,6 +24,165 @@ use winit::{
     event_loop::EventLoopProxy,
 };
 
+#[derive(strum::EnumIter, strum::Display, PartialEq, Copy, Clone)]
+pub enum Shape {
+    Disk,
+    Rectangle,
+    EquilateralTriangle,
+    IsoscelesTriangle,
+    Triangle,
+    Capsule,
+    Torus,
+    Line,
+    Plane,
+    LineSegment,
+    PlaneSegment,
+    Ray,
+    PlaneRay,
+    Hexagon,
+    Pentagon,
+    Polygon,
+    Cross,
+}
+
+impl Shape {
+    fn labels(self) -> &'static [&'static str] {
+        use Shape::*;
+        const R: &'static str = "Radius";
+        const W: &'static str = "Width";
+        const H: &'static str = "Height";
+        match self {
+            Disk | Capsule | Hexagon | Pentagon | EquilateralTriangle => &[R],
+            Rectangle | IsoscelesTriangle => &[W, H],
+            Torus => &["Major Radius", "Minor Radius"],
+            Cross => &["Length", "Thickness"],
+            Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment | Polygon => &[],
+        }
+    }
+
+    fn dim_range(&self) -> &[core::ops::RangeInclusive<f32>] {
+        use Shape::*;
+        match self {
+            Disk | Capsule | EquilateralTriangle | Hexagon | Pentagon => &[0.0..=0.5],
+            Rectangle => &[0.0..=1.0, 0.0..=1.0],
+            IsoscelesTriangle => &[0.0..=1.0, -0.5..=0.5],
+            Torus => &[0.0..=0.5, 0.0..=0.2],
+            Cross => &[0.0..=0.5, 0.0..=0.5],
+            Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment | Polygon => &[],
+        }
+    }
+
+    fn default_dims(&self) -> &[f32] {
+        use Shape::*;
+        match self {
+            Disk | Capsule | EquilateralTriangle | Hexagon | Pentagon => &[0.2],
+            Rectangle | IsoscelesTriangle => &[0.4, 0.3],
+            Torus => &[0.2, 0.1],
+            Cross => &[0.35, 0.1],
+            Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment | Polygon => &[],
+        }
+    }
+
+    fn default_points(&self) -> &[[f32; 2]] {
+        use Shape::*;
+        match self {
+            Polygon => &[
+                [0.0, 0.3],
+                [0.0, -0.3],
+                [-0.4, -0.2],
+                [0.3, 0.0],
+                [-0.4, 0.2],
+            ],
+            Triangle => &[[-0.1, -0.2], [0.3, 0.2], [0.2, -0.3]],
+            Capsule | LineSegment | PlaneSegment => &[[-0.1, -0.1], [0.2, 0.1]],
+            Ray | PlaneRay => &[[0.0, 0.0]],
+            _ => &[],
+        }
+    }
+
+    fn default_params(&self) -> Params {
+        let default_ps = self.default_points();
+        let mut ps = [[1e10; 2]; 5];
+        for i in 0..default_ps.len() {
+            ps[i] = default_ps[i];
+        }
+
+        let default_dims = self.default_dims();
+        let mut dims = [0.0; 2];
+        for i in 0..default_dims.len() {
+            dims[i] = default_dims[i];
+        }
+
+        Params {
+            dims,
+            ps,
+            rot: 0.0,
+            repeat: RepetitionData::default(),
+            pad: Optional_f32::NONE,
+            onion: Optional_f32::NONE,
+        }
+    }
+}
+
+#[derive(Copy, Clone, PartialEq)]
+pub struct RepetitionData {
+    pub current: RepetitionValue,
+    pub dim: Vec2,
+    pub n1: UVec2,
+    pub n2: UVec2,
+}
+
+impl From<Repetition> for RepetitionData {
+    fn from(rep: Repetition) -> RepetitionData {
+        use RepetitionValue::*;
+        let dim = match rep.current {
+            None => Vec2::ZERO,
+            Unlimited => rep.unlimited,
+            Mirrored => rep.mirrored,
+            Limited => rep.limited.0,
+            Rectangular => vec2(rep.rectangular.0, 0.0),
+            Angular => vec2(rep.angular.0, 0.0),
+        };
+        let n1 = match rep.current {
+            None | Unlimited | Mirrored => UVec2::ZERO,
+            Limited => rep.limited.1,
+            Rectangular => rep.rectangular.1,
+            Angular => UVec2::new(rep.angular.1, 0),
+        };
+        let n2 = match rep.current {
+            Limited => rep.limited.1,
+            _ => UVec2::ZERO,
+        };
+        RepetitionData {
+            current: rep.current,
+            dim: dim.into(),
+            n1: n1.into(),
+            n2: n2.into(),
+        }
+    }
+}
+
+impl Default for RepetitionData {
+    fn default() -> Self {
+        Self {
+            current: RepetitionValue::None,
+            dim: Vec2::ZERO,
+            n1: UVec2::ZERO,
+            n2: UVec2::ZERO,
+        }
+    }
+}
+
+#[derive(Copy, Clone, PartialEq)]
+struct Params {
+    pub dims: [f32; 2],
+    pub ps: [[f32; 2]; 5],
+    pub rot: f32,
+    pub repeat: RepetitionData,
+    pub onion: Optional_f32,
+    pub pad: Optional_f32,
+}
+
 pub struct Controller {
     size: PhysicalSize<u32>,
     start: Instant,
@@ -22,13 +191,16 @@ pub struct Controller {
     mouse_button_pressed: bool,
     can_drag: Option<usize>,
     drag_point: Option<usize>,
-    shape: Shape,
-    params: Vec<Params>,
     shader_constants: ShaderConstants,
-    onion: EnabledNumber,
-    pad: EnabledNumber,
-    repeat_x: EnabledNumber,
-    repeat_y: EnabledNumber,
+    shape: Shape,
+    onion: EnabledNumber<f32>,
+    pad: EnabledNumber<f32>,
+    repeat: Repetition,
+    params: Vec<Params>,
+    prev_params: Params,
+    grid: Grid,
+    grid_needs_updating: bool,
+    smooth: bool,
 }
 
 impl crate::controller::Controller for Controller {
@@ -41,13 +213,16 @@ impl crate::controller::Controller for Controller {
             mouse_button_pressed: false,
             can_drag: None,
             drag_point: None,
-            shape: Shape::Disk,
-            params: Shape::iter().map(|shape| shape.default_params()).collect(),
             shader_constants: ShaderConstants::zeroed(),
+            shape: Shape::Disk,
             onion: EnabledNumber::new(0.05, false),
             pad: EnabledNumber::new(0.05, false),
-            repeat_x: EnabledNumber::new(0.5, false),
-            repeat_y: EnabledNumber::new(0.5, false),
+            repeat: Repetition::default(),
+            params: Shape::iter().map(|shape| shape.default_params()).collect(),
+            prev_params: Shape::Disk.default_params(),
+            grid: Grid::new(),
+            grid_needs_updating: true,
+            smooth: true,
         }
     }
 
@@ -79,7 +254,7 @@ impl crate::controller::Controller for Controller {
             self.can_drag = self.params[self.shape as usize].ps[0..num_points as usize]
                 .iter()
                 .position(|p| {
-                    (rotate((*p).into(), self.params[self.shape as usize].rot)
+                    (rotate((*p).into(), -self.params[self.shape as usize].rot)
                         - self.from_pixels(self.cursor))
                     .length_squared()
                         < 0.0005
@@ -98,10 +273,14 @@ impl crate::controller::Controller for Controller {
     }
 
     fn resize(&mut self, size: PhysicalSize<u32>) {
-        self.size = size
+        self.size = size;
     }
 
     fn update(&mut self) {
+        self.params[self.shape as usize] = self.params();
+        if self.params[self.shape as usize] != self.prev_params {
+            self.grid_needs_updating = true;
+        }
         self.elapsed = self.start.elapsed();
         self.shader_constants = ShaderConstants {
             size: self.size.into(),
@@ -109,14 +288,12 @@ impl crate::controller::Controller for Controller {
             cursor: self.cursor.into(),
             mouse_button_pressed: !(1
                 << (self.mouse_button_pressed && self.drag_point.is_none()) as u32),
-            shape: self.shape as u32,
-            params: Params {
-                onion: self.onion.into(),
-                pad: self.pad.into(),
-                repeat: [self.repeat_x.into(), self.repeat_y.into()],
-                ..self.params[self.shape as usize]
-            },
+            points: self.params[self.shape as usize]
+                .ps
+                .map(|p| rotate(p.into(), -self.params[self.shape as usize].rot).into()),
+            smooth: self.smooth.into(),
         };
+        self.prev_params = self.params[self.shape as usize];
     }
 
     fn push_constants(&self) -> &[u8] {
@@ -127,7 +304,7 @@ impl crate::controller::Controller for Controller {
         true
     }
 
-    fn ui(&mut self, ctx: &Context, ui: &mut egui::Ui, _: &EventLoopProxy<UserEvent>) {
+    fn ui(&mut self, ctx: &Context, ui: &mut egui::Ui, event_proxy: &EventLoopProxy<UserEvent>) {
         ctx.set_cursor_icon(if self.drag_point.is_some() {
             CursorIcon::Grabbing
         } else if self.can_drag.is_some() {
@@ -138,28 +315,46 @@ impl crate::controller::Controller for Controller {
         for shape in Shape::iter() {
             ui.radio_value(&mut self.shape, shape, shape.to_string());
         }
+        {
+            let params = &mut self.params[self.shape as usize];
+            let labels = self.shape.labels();
+            if labels.len() > 0 {
+                ui.separator();
+            }
+            for i in 0..labels.len() {
+                let ranges = self.shape.dim_range();
+                let range = ranges[i].clone();
+                let speed = (range.end() - range.start()) * 0.02;
+                ui.horizontal(|ui| {
+                    ui.label(labels[i as usize]);
+                    ui.add(
+                        egui::DragValue::new(&mut params.dims[i as usize])
+                            .clamp_range(range)
+                            .speed(speed),
+                    );
+                });
+            }
+        }
         ui.separator();
+        ui.checkbox(&mut self.smooth, "Smooth");
         self.pad.ui(ui, "Pad", 0.0..=0.1, 0.01);
         self.onion.ui(ui, "Onion", 0.0..=0.1, 0.01);
-        self.repeat_x.ui(ui, "Repeat X", 0.01..=1.0, 0.01);
-        self.repeat_y.ui(ui, "Repeat Y", 0.01..=1.0, 0.01);
-        let params = &mut self.params[self.shape as usize];
-        let labels = self.shape.labels();
-        if labels.len() > 0 {
-            ui.separator();
+        ui.heading("Repetition");
+        self.repeat.ui(ui);
+        if self.grid_needs_updating {
+            self.grid_needs_updating = false;
+            self.update_grid();
+            self.signal_new_buffers(event_proxy);
         }
-        for i in 0..labels.len() {
-            let ranges = self.shape.dim_range();
-            let range = ranges[i].clone();
-            let speed = (range.end() - range.start()) * 0.02;
-            ui.horizontal(|ui| {
-                ui.label(labels[i as usize]);
-                ui.add(
-                    egui::DragValue::new(&mut params.dims[i as usize])
-                        .clamp_range(range)
-                        .speed(speed),
-                );
-            });
+    }
+
+    fn buffers(&self) -> BufferData {
+        BufferData {
+            bind_group_buffers: vec![BindGroupBufferType::SSBO(SSBO {
+                data: bytemuck::cast_slice(&self.grid.grid),
+                read_only: true,
+            })],
+            ..Default::default()
         }
     }
 }
@@ -169,6 +364,95 @@ impl Controller {
         let p = vec2(p.x, -p.y);
         (p - 0.5 * vec2(self.size.width as f32, -(self.size.height as f32)))
             / self.size.height as f32
+    }
+
+    fn params(&self) -> Params {
+        Params {
+            pad: self.pad.into(),
+            onion: self.onion.into(),
+            repeat: self.repeat.into(),
+            ..self.params[self.shape as usize]
+        }
+    }
+
+    fn update_grid(&mut self) {
+        const HALF_CELL_SIZE: f32 = 0.5 / BASE as f32;
+        for i in 0..NUM_X {
+            for j in 0..NUM_Y {
+                let x = (i as f32 - 0.5 * NUM_X as f32) / BASE as f32 + HALF_CELL_SIZE;
+                let y = (j as f32 - 0.5 * NUM_Y as f32) / BASE as f32 + HALF_CELL_SIZE;
+                let value = self.sdf(vec2(x, y));
+                self.grid.set(i, j, value);
+            }
+        }
+    }
+
+    fn signal_new_buffers(&self, event_proxy: &EventLoopProxy<UserEvent>) {
+        if event_proxy.send_event(UserEvent::NewBuffersReady).is_err() {
+            panic!("Event loop dead");
+        }
+    }
+
+    fn sdf(&self, mut p: Vec2) -> f32 {
+        use Shape::*;
+        let params = self.params();
+        let dim: Vec2 = params.dims.into();
+        let radius = dim.x;
+        let p0: Vec2 = params.ps[0].into();
+        let p1: Vec2 = params.ps[1].into();
+        let p2: Vec2 = params.ps[2].into();
+        let p3: Vec2 = params.ps[3].into();
+        let p4: Vec2 = params.ps[4].into();
+        p = p.rotate(Vec2::from_angle(params.rot));
+
+        let f = |p| match self.shape {
+            Disk => sdf::disk(p, radius),
+            Rectangle => sdf::rectangle(p, dim),
+            EquilateralTriangle => sdf::equilateral_triangle(p, radius),
+            IsoscelesTriangle => sdf::isosceles_triangle(p, dim),
+            Triangle => sdf::triangle(p, p0, p1, p2),
+            Capsule => sdf::capsule(p, p0, p1, radius),
+            Torus => sdf::torus(p, dim),
+            Line => sdf::line(p, Vec2::Y),
+            Plane => sdf::plane(p, Vec2::Y),
+            LineSegment => sdf::line_segment(p, p0, p1),
+            PlaneSegment => sdf::plane_segment(p, p0, p1),
+            Ray => sdf::ray(p - p0, Vec2::X),
+            PlaneRay => sdf::plane_ray(p - p0, Vec2::X),
+            Hexagon => sdf::hexagon(p, radius),
+            Pentagon => sdf::pentagon(p, radius),
+            Polygon => sdf::polygon(p, [p0, p1, p2, p3, p4]),
+            Cross => sdf::cross(p, dim),
+        };
+
+        let mut d = {
+            let RepetitionData {
+                current,
+                dim,
+                n1,
+                n2,
+            } = params.repeat;
+            use sdf::ops::{fast_repeat, repeat};
+            use RepetitionValue::*;
+            match current {
+                None => f(p),
+                Unlimited => repeat::Repeat::<2>::repeat_xy(p, dim, f),
+                Limited => repeat::RepeatLimited::<2>::repeat_xy(p, dim, n1, n2, f),
+                Rectangular => f(fast_repeat::repeat_rectangular(p, dim.x, n1)),
+                Angular => repeat::repeat_angular(p, dim.x, n1.x, f),
+                Mirrored => f(fast_repeat::repeat_mirrored(p, dim)),
+            }
+        };
+
+        if params.pad.has_value() {
+            d = sdf::ops::pad(d, params.pad.value)
+        }
+
+        if params.onion.has_value() {
+            d = sdf::ops::onion(d, params.onion.value)
+        }
+
+        d
     }
 }
 

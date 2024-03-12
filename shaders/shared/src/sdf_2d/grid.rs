@@ -1,4 +1,3 @@
-use super::{Bool, Size, Vec2};
 use crate::functional::tuple::*;
 use bytemuck::{Pod, Zeroable};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
@@ -6,7 +5,7 @@ use spirv_std::num_traits::Float;
 
 // Only need padding of 2 but Gridchunk is size 4 so this simplifies things
 pub const SMOOTH_PADDING: usize = 4;
-pub const BASE: usize = 32 - SMOOTH_PADDING;
+pub const BASE: usize = 128 - SMOOTH_PADDING;
 pub const NUM_Y: usize = BASE + SMOOTH_PADDING;
 pub const NUM_X: usize = (BASE + SMOOTH_PADDING) * 3 + SMOOTH_PADDING;
 
@@ -106,16 +105,4 @@ impl core::ops::IndexMut<usize> for GridChunk {
             _ => panic!(),
         }
     }
-}
-
-#[derive(Copy, Clone, Pod, Zeroable)]
-#[repr(C)]
-pub struct ShaderConstants {
-    pub size: Size,
-    pub time: f32,
-    pub cursor: Vec2,
-    /// Bit mask of the pressed buttons (0 = Left, 1 = Middle, 2 = Right).
-    pub mouse_button_pressed: u32,
-    pub zoom: f32,
-    pub smooth: Bool,
 }

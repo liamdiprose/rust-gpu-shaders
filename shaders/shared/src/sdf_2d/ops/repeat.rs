@@ -1,6 +1,6 @@
 use crate::functional::tuple::*;
 use core::f32::consts::TAU;
-use spirv_std::glam::{vec2, IVec2, Mat2, Vec2};
+use spirv_std::glam::{vec2, Mat2, UVec2, Vec2};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 
@@ -95,7 +95,7 @@ impl<const N: i32> RepeatLimited<N> {
         d
     }
 
-    pub fn repeat_xy<F>(p: Vec2, s: Vec2, lima: IVec2, limb: IVec2, sdf: F) -> f32
+    pub fn repeat_xy<F>(p: Vec2, s: Vec2, lima: UVec2, limb: UVec2, sdf: F) -> f32
     where
         F: Fn(Vec2) -> f32,
     {
@@ -116,7 +116,7 @@ impl<const N: i32> RepeatLimited<N> {
 }
 
 /// Repeats `n` times around a circle of radius `r`
-pub fn repeat_r<F>(p: Vec2, n: i32, r: f32, sdf: F) -> f32
+pub fn repeat_angular<F>(p: Vec2, r: f32, n: u32, sdf: F) -> f32
 where
     F: Fn(Vec2) -> f32,
 {

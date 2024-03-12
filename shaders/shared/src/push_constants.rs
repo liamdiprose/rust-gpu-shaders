@@ -3,6 +3,7 @@ use spirv_std::glam;
 #[cfg(not(target_arch = "spirv"))]
 use winit::dpi::PhysicalSize;
 
+pub mod fun_rep_demo;
 pub mod hydrogen_wavefunction;
 pub mod koch_snowflake;
 pub mod mandelbrot;
@@ -13,8 +14,6 @@ pub mod sdfs_3d;
 pub mod sierpinski_triangle;
 pub mod spherical_harmonics;
 pub mod spherical_harmonics_shape;
-pub mod fun_rep_demo;
-pub mod sdfs_pixel_grid;
 
 pub fn largest_size() -> usize {
     use core::mem::size_of;
@@ -28,6 +27,7 @@ pub fn largest_size() -> usize {
         .max(size_of::<hydrogen_wavefunction::ShaderConstants>())
         .max(size_of::<spherical_harmonics::ShaderConstants>())
         .max(size_of::<spherical_harmonics_shape::ShaderConstants>())
+        .max(size_of::<fun_rep_demo::ShaderConstants>())
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -50,7 +50,7 @@ impl From<PhysicalSize<u32>> for Size {
     }
 }
 
-#[derive(Copy, Clone, Pod, Zeroable)]
+#[derive(Copy, Clone, Pod, Zeroable, PartialEq)]
 #[repr(C)]
 pub struct Vec2 {
     pub x: f32,
@@ -73,7 +73,7 @@ impl Into<glam::Vec2> for Vec2 {
     }
 }
 
-#[derive(Copy, Clone, Pod, Zeroable)]
+#[derive(Copy, Clone, Pod, Zeroable, PartialEq)]
 #[repr(C)]
 pub struct UVec2 {
     pub x: u32,

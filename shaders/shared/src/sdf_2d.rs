@@ -10,7 +10,9 @@ use spirv_std::glam::{vec2, BVec3, Vec2, Vec2Swizzles};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 
+pub mod grid;
 pub mod ops;
+pub mod specialization;
 
 pub fn disk(p: Vec2, r: f32) -> f32 {
     p.length() - r

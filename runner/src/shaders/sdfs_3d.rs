@@ -29,11 +29,11 @@ pub struct Controller {
     shader_constants: ShaderConstants,
     camera: Vec2,
     slice_z: f32,
-    onion: EnabledNumber,
-    pad: EnabledNumber,
-    repeat_x: EnabledNumber,
-    repeat_y: EnabledNumber,
-    repeat_z: EnabledNumber,
+    onion: EnabledNumber<f32>,
+    pad: EnabledNumber<f32>,
+    repeat_x: EnabledNumber<f32>,
+    repeat_y: EnabledNumber<f32>,
+    repeat_z: EnabledNumber<f32>,
 }
 
 impl crate::controller::Controller for Controller {

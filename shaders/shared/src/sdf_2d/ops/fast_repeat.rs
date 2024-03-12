@@ -1,4 +1,4 @@
-use spirv_std::glam::{vec2, IVec2, Vec2, Vec2Swizzles};
+use spirv_std::glam::{vec2, UVec2, Vec2, Vec2Swizzles};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 
@@ -18,7 +18,7 @@ pub fn repeat_xy(p: Vec2, s: Vec2) -> Vec2 {
 }
 
 // fast space repetition by mirroring every other instance
-pub fn repeat_mirrored(p: Vec2, s: f32) -> Vec2 {
+pub fn repeat_mirrored(p: Vec2, s: Vec2) -> Vec2 {
     let id = (p / s).round();
     let r = p - s * id;
     vec2(
@@ -42,7 +42,7 @@ pub fn repeat_mirrored_y(p: Vec2, s: f32) -> Vec2 {
 }
 
 // the sdf must be symmetric with respect to the tile boundaries
-pub fn repeat_rectangular(mut p: Vec2, size: IVec2, s: f32) -> Vec2 {
+pub fn repeat_rectangular(mut p: Vec2, s: f32, size: UVec2) -> Vec2 {
     p = (p / s).abs() - (size.as_vec2() * 0.5 - 0.5);
     p = if p.x < p.y { p.yx() } else { p };
     p.y -= p.y.round().min(0.0);
@@ -50,7 +50,7 @@ pub fn repeat_rectangular(mut p: Vec2, size: IVec2, s: f32) -> Vec2 {
 }
 
 // the sdf must be symmetric with respect to the tile boundaries
-pub fn repeat_limited(p: Vec2, s: f32, lima: IVec2, limb: IVec2) -> Vec2 {
+pub fn repeat_limited(p: Vec2, s: Vec2, lima: UVec2, limb: UVec2) -> Vec2 {
     p - s * (p / s).round().clamp(-lima.as_vec2(), limb.as_vec2())
 }
 
