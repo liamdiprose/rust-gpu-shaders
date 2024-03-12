@@ -217,7 +217,7 @@ impl crate::controller::Controller for Controller {
 }
 
 fn signal_new_vertices(event_proxy: &EventLoopProxy<UserEvent>) {
-    if event_proxy.send_event(UserEvent::NewVerticesReady).is_err() {
+    if event_proxy.send_event(UserEvent::NewBuffersReady).is_err() {
         panic!("Event loop dead");
     }
 }
