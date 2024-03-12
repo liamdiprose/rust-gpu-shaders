@@ -8,6 +8,7 @@ use spirv_std::glam::{vec2, vec3, Vec2, Vec3};
 use spirv_std::num_traits::Float;
 
 pub mod ops;
+pub mod specialization;
 
 // `n` must be normalized
 pub fn plane(p: Vec3, n: Vec3) -> f32 {
