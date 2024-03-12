@@ -1,10 +1,6 @@
-use spirv_std::glam::{vec3, Vec2, Vec3, Vec3Swizzles};
+use spirv_std::glam::{vec3, UVec3, Vec2, Vec3, Vec3Swizzles};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
-
-pub use crate::sdf_2d::ops::{
-    difference, intersection, onion, pad, smooth_union, symmetric_difference, union,
-};
 
 pub fn repeat_x(p: Vec3, factor: f32) -> Vec3 {
     vec3(p.x - factor * (p.x / factor).round(), p.y, p.z)
@@ -34,4 +30,13 @@ pub fn repeat_yz(p: Vec3, factor: Vec2) -> Vec3 {
 
 pub fn repeat_xyz(p: Vec3, factor: Vec3) -> Vec3 {
     p - factor * (p / factor).round()
+}
+
+// the sdf must be symmetric with respect to the tile boundaries
+pub fn repeat_rectangular(mut p: Vec3, s: f32, size: UVec3) -> Vec3 {
+    p = (p / s).abs() - (size.as_vec3() * 0.5 - 0.5);
+    p = if p.x < p.y { p.yxz() } else { p };
+    p = if p.z < p.y { p.yzx() } else { p };
+    p.y -= p.y.round().min(0.0);
+    p * s
 }
