@@ -3,27 +3,22 @@
 use push_constants::ray_marching::ShaderConstants;
 use shared::sdf_3d as sdf;
 use shared::*;
-use spirv_std::glam::{vec2, vec3, Mat3, Vec2Swizzles, Vec3, Vec4};
+use spirv_std::glam::{vec2, vec3, Quat, Vec2Swizzles, Vec3, Vec4, Vec4Swizzles};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;
 
-const MAX_STEPS: u32 = 100;
+const MAX_STEPS: u32 = 200;
 const MAX_DIST: f32 = 100.0;
-const SURF_DIST: f32 = 0.01;
+const SURF_DIST: f32 = 0.0001;
 const NUM_REFLECTIONS: u32 = 8;
 
 #[repr(u32)]
-#[derive(PartialEq)]
+#[derive(PartialEq, Default)]
 pub enum Material {
+    #[default]
     Matte,
     Mirror,
-}
-
-impl Default for Material {
-    fn default() -> Self {
-        Self::Matte
-    }
 }
 
 pub struct SdfResult {
@@ -39,39 +34,48 @@ impl SdfResult {
             other
         }
     }
+    pub fn divergent() -> Self {
+        Self {
+            distance: 1e20,
+            material: Default::default(),
+        }
+    }
 }
 
 fn sdf(p: Vec3, _time: f32) -> SdfResult {
     let plane = SdfResult {
         material: Material::Matte,
-        distance: sdf::plane(p - vec3(0.0, 0.0, 0.0), Vec3::Y),
+        distance: sdf::plane(p - vec3(0.0, (p.x * 20.0).sin() * 0.02, 0.0), Vec3::Y),
     };
-    let torus = SdfResult {
+    let cubes = SdfResult {
         material: Material::Matte,
-        distance: sdf::torus(p - vec3(0.0, 1.0, 0.0), vec2(0.5, 0.2), Vec3::X),
+        distance: {
+            let sdf = |p| sdf::cuboid(p, Vec3::splat(0.5));
+            sdf::ops::repeat::repeat_angular_y(p - vec3(0.0, 1.0, 0.0), 12.0, 16, sdf)
+        },
     };
-    let sphere = SdfResult {
+    let frame_dim = Vec3::splat(0.05);
+    let inner_dim = vec3(0.4, 0.75, 0.3);
+    let mirrors = SdfResult {
+        material: Material::Mirror,
+        distance: {
+            let sdf = |p| sdf::cuboid(p, inner_dim + (0.5 * frame_dim) - f32::EPSILON);
+            sdf::ops::repeat::repeat_angular_y(p - vec3(0.0, 0.8, 0.0), 4.0, 8, sdf)
+        },
+    };
+    let mirror_frames = SdfResult {
         material: Material::Matte,
-        distance: sdf::sphere(p - vec3(1.2, 1.6, -1.0), 0.3),
+        distance: {
+            let sdf = |p| sdf::cuboid_frame(p, inner_dim, frame_dim);
+            sdf::ops::repeat::repeat_angular_y(p - vec3(0.0, 0.8, 0.0), 4.0, 8, sdf)
+        },
     };
-    let mirror = SdfResult {
-        material: Material::Mirror,
-        distance: sdf::cuboid(p - vec3(2.0, 1.0, 0.0), vec3(0.3, 2.0, 2.4)),
-    };
-    let mirror2 = SdfResult {
-        material: Material::Mirror,
-        distance: sdf::cuboid(p - vec3(-5.0, 1.0, 0.0), vec3(0.3, 1.0, 2.4)),
-    };
-    plane
-        .union(torus)
-        .union(mirror)
-        .union(mirror2)
-        .union(sphere)
+    plane.union(mirrors).union(mirror_frames).union(cubes)
 }
 
 struct RayMarchResult {
     distance: f32,
-    closest_distance: f32,
+    _closest_distance: f32,
     material: Material,
 }
 
@@ -98,7 +102,7 @@ fn ray_march(ro: Vec3, rd: Vec3, time: f32) -> RayMarchResult {
 
     RayMarchResult {
         distance: d0,
-        closest_distance: cd,
+        _closest_distance: cd,
         material,
     }
 }
@@ -134,20 +138,12 @@ pub fn main_fs(
     #[spirv(push_constant)] constants: &ShaderConstants,
     output: &mut Vec4,
 ) {
-    let translate = -vec2(
-        constants.translate_x + constants.drag_start_x - constants.drag_end_x,
-        constants.translate_y + constants.drag_start_y - constants.drag_end_y,
-    ) / constants.height as f32
-        * PI;
-
-    let uv = (vec2(frag_coord.x, -frag_coord.y)
-        - 0.5 * vec2(constants.width as f32, -(constants.height as f32)))
-        / constants.height as f32;
-
-    let rm = Mat3::from_rotation_y(translate.x).mul_mat3(&Mat3::from_rotation_x(translate.y));
-    let mut ro = rm.mul_vec3(vec3(0.0, 1.0, -constants.zoom));
-    let mut rd = rm.mul_vec3(vec3(uv.x, uv.y, 1.0)).normalize();
+    let uv = from_pixels(frag_coord.xy(), constants.size);
+    let rot = Quat::from_rotation_y(constants.yaw) * Quat::from_rotation_x(constants.pitch);
+    let mut rd = rot * vec3(uv.x, uv.y, -1.0).normalize();
+    let mut ro: Vec3 = constants.pos.into();
     let mut result = ray_march(ro, rd, constants.time);
+    let mut num_mirrored = 0;
 
     for _ in 0..NUM_REFLECTIONS {
         match result.material {
@@ -155,6 +151,7 @@ pub fn main_fs(
                 break;
             }
             Material::Mirror => {
+                num_mirrored += 1;
                 let n = get_normal(ro + rd * result.distance, constants.time);
                 ro = ro + rd * result.distance + n * SURF_DIST * 2.0;
                 rd = rd - n * n.dot(rd) * 2.0;
@@ -162,9 +159,13 @@ pub fn main_fs(
             }
         }
     }
-    let dif = get_light(ro + rd * result.distance, constants.time);
-    let c = result.closest_distance.abs().atan() / (PI / 2.0);
-    let col = vec3(dif, dif, dif).lerp(vec3(1.0 - c, 0.5 - c, 0.2 - c), 0.2);
+    let col = if result.distance >= MAX_DIST {
+        let p = ro + rd * result.distance;
+        vec3(0.1 * result.distance / p.y, 0.2, 0.1)
+    } else {
+        let dif = get_light(ro + rd * result.distance, constants.time);
+        Vec3::splat(dif).lerp(vec3(0.95, 1.0, 0.95), num_mirrored as f32 * 0.1)
+    };
 
     *output = col.extend(1.0);
 }
