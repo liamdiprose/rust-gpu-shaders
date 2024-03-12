@@ -38,15 +38,6 @@ pub fn ray(p: Vec2, d: Vec2) -> f32 {
     p.distance(d * p.dot(d).max(0.0))
 }
 
-// `d` must be normalized
-pub fn plane_ray(p: Vec2, d: Vec2) -> f32 {
-    ray(p, d) * d.perp_dot(p).signum()
-}
-
-pub fn plane_segment(p: Vec2, a: Vec2, b: Vec2) -> f32 {
-    line_segment(p, a, b) * (b - a).perp_dot(p - a).signum()
-}
-
 pub fn line_segment(p: Vec2, a: Vec2, b: Vec2) -> f32 {
     p.distance(a + (p - a).project_onto_segment(b - a))
 }

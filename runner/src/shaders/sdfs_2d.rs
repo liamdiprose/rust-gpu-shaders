@@ -36,9 +36,7 @@ pub enum Shape {
     Line,
     Plane,
     LineSegment,
-    PlaneSegment,
     Ray,
-    PlaneRay,
     Hexagon,
     Pentagon,
     Polygon,
@@ -56,7 +54,7 @@ impl Shape {
             Rectangle | IsoscelesTriangle => &[W, H],
             Torus => &["Major Radius", "Minor Radius"],
             Cross => &["Length", "Thickness"],
-            Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment | Polygon => &[],
+            Triangle | Plane | Line | Ray | LineSegment | Polygon => &[],
         }
     }
 
@@ -68,7 +66,7 @@ impl Shape {
             IsoscelesTriangle => &[0.0..=1.0, -0.5..=0.5],
             Torus => &[0.0..=0.5, 0.0..=0.2],
             Cross => &[0.0..=0.5, 0.0..=0.5],
-            Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment | Polygon => &[],
+            Triangle | Plane | Line | Ray | LineSegment | Polygon => &[],
         }
     }
 
@@ -79,7 +77,7 @@ impl Shape {
             Rectangle | IsoscelesTriangle => &[0.4, 0.3],
             Torus => &[0.2, 0.1],
             Cross => &[0.35, 0.1],
-            Triangle | Plane | Line | Ray | PlaneRay | LineSegment | PlaneSegment | Polygon => &[],
+            Triangle | Plane | Line | Ray | LineSegment | Polygon => &[],
         }
     }
 
@@ -94,8 +92,8 @@ impl Shape {
                 [-0.4, 0.2],
             ],
             Triangle => &[[-0.1, -0.2], [0.3, 0.2], [0.2, -0.3]],
-            Capsule | LineSegment | PlaneSegment => &[[-0.1, -0.1], [0.2, 0.1]],
-            Ray | PlaneRay => &[[0.0, 0.0]],
+            Capsule | LineSegment => &[[-0.1, -0.1], [0.2, 0.1]],
+            Ray => &[[0.0, 0.0]],
             _ => &[],
         }
     }
@@ -416,9 +414,7 @@ impl Controller {
             Line => sdf::line(p, Vec2::Y),
             Plane => sdf::plane(p, Vec2::Y),
             LineSegment => sdf::line_segment(p, p0, p1),
-            PlaneSegment => sdf::plane_segment(p, p0, p1),
             Ray => sdf::ray(p - p0, Vec2::X),
-            PlaneRay => sdf::plane_ray(p - p0, Vec2::X),
             Hexagon => sdf::hexagon(p, radius),
             Pentagon => sdf::pentagon(p, radius),
             Polygon => sdf::polygon(p, [p0, p1, p2, p3, p4]),
