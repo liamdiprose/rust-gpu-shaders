@@ -112,6 +112,7 @@ impl Shape {
         }
 
         Params {
+            shape: *self,
             dims,
             ps,
             rot: 0.0,
@@ -148,7 +149,7 @@ impl From<Repetition> for RepetitionData {
             Angular => UVec2::new(rep.angular.1, 0),
         };
         let n2 = match rep.current {
-            Limited => rep.limited.1,
+            Limited => rep.limited.2,
             _ => UVec2::ZERO,
         };
         RepetitionData {
@@ -173,6 +174,7 @@ impl Default for RepetitionData {
 
 #[derive(Copy, Clone, PartialEq)]
 struct Params {
+    pub shape: Shape,
     pub dims: [f32; 2],
     pub ps: [[f32; 2]; 5],
     pub rot: f32,
@@ -335,8 +337,8 @@ impl crate::controller::Controller for Controller {
         }
         ui.separator();
         ui.checkbox(&mut self.smooth, "Smooth");
-        self.pad.ui(ui, "Pad", 0.0..=0.1, 0.01);
-        self.onion.ui(ui, "Onion", 0.0..=0.1, 0.01);
+        self.pad.ui(ui, "Pad", 0.0..=0.2, 0.01);
+        self.onion.ui(ui, "Onion", 0.0..=0.2, 0.01);
         ui.heading("Repetition");
         self.repeat.ui(ui);
         if self.grid_needs_updating {
