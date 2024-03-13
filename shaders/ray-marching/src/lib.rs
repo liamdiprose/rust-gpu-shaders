@@ -45,7 +45,7 @@ impl SdfResult {
 fn sdf(p: Vec3, _time: f32) -> SdfResult {
     let plane = SdfResult {
         material: Material::Matte,
-        distance: sdf::plane(p - vec3(0.0, (p.x * 20.0).sin() * 0.02, 0.0), Vec3::Y),
+        distance: sdf::plane(p - vec3(0.0, 0.0, 0.0), Vec3::Y),
     };
     let cubes = SdfResult {
         material: Material::Matte,
@@ -55,7 +55,7 @@ fn sdf(p: Vec3, _time: f32) -> SdfResult {
         },
     };
     let frame_dim = Vec3::splat(0.05);
-    let inner_dim = vec3(0.4, 0.75, 0.3);
+    let inner_dim = vec3(0.4, 0.775, 0.3);
     let mirrors = SdfResult {
         material: Material::Mirror,
         distance: {
@@ -75,24 +75,20 @@ fn sdf(p: Vec3, _time: f32) -> SdfResult {
 
 struct RayMarchResult {
     distance: f32,
-    _closest_distance: f32,
     material: Material,
 }
 
 fn ray_march(ro: Vec3, rd: Vec3, time: f32) -> RayMarchResult {
     let mut d0 = 0.0;
-    let mut cd = MAX_DIST;
     let mut material = Material::default();
 
     for _ in 0..MAX_STEPS {
         let p = ro + rd * d0;
         let result = sdf(p, time);
         let ds = result.distance;
-        cd = cd.min(ds);
         d0 += ds;
         if ds < SURF_DIST {
             material = result.material;
-            cd = 0.0;
             break;
         }
         if d0 > MAX_DIST {
@@ -102,9 +98,34 @@ fn ray_march(ro: Vec3, rd: Vec3, time: f32) -> RayMarchResult {
 
     RayMarchResult {
         distance: d0,
-        _closest_distance: cd,
         material,
     }
+}
+
+fn soft_shadows(ro: Vec3, rd: Vec3, time: f32) -> f32 {
+    let mut t = 0.01;
+    let mut ph = 1e20;
+    let mut res = 1.0;
+    const K: f32 = 32.0;
+
+    for _ in 0..MAX_STEPS {
+        let p = ro + rd * t;
+        let h = sdf(p, time).distance;
+        let y = h * h / (2.0 * ph);
+        let d = (h * h - y * y).sqrt();
+        res = res.min(K * d / ((t - y).max(0.0)));
+        ph = h;
+        t += h;
+        if h < SURF_DIST {
+            res = 0.0;
+            break;
+        }
+        if t > MAX_DIST {
+            break;
+        }
+    }
+
+    res
 }
 
 fn get_normal(p: Vec3, time: f32) -> Vec3 {
@@ -124,12 +145,7 @@ fn get_light(p: Vec3, time: f32) -> f32 {
     let light_vector = (light_pos - p).normalize();
     let normal_vector = get_normal(p, time);
     let dif = saturate(light_vector.dot(normal_vector));
-    let result = ray_march(p + normal_vector * SURF_DIST * 2.0, light_vector, time);
-    if result.distance < light_pos.distance(p) {
-        dif * 0.1
-    } else {
-        dif
-    }
+    dif * soft_shadows(p, light_vector, time).max(0.1)
 }
 
 #[spirv(fragment)]
@@ -164,7 +180,7 @@ pub fn main_fs(
         vec3(0.1 * result.distance / p.y, 0.2, 0.1)
     } else {
         let dif = get_light(ro + rd * result.distance, constants.time);
-        Vec3::splat(dif).lerp(vec3(0.95, 1.0, 0.95), num_mirrored as f32 * 0.1)
+        Vec3::splat(dif).lerp(vec3(0.95, 1.0, 0.95), num_mirrored as f32 * 0.0)
     };
 
     *output = col.extend(1.0);
