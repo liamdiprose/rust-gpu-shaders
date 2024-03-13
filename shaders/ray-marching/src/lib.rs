@@ -47,11 +47,15 @@ fn sdf(p: Vec3, _time: f32) -> SdfResult {
         material: Material::Matte,
         distance: sdf::plane(p - vec3(0.0, 0.0, 0.0), Vec3::Y),
     };
-    let cubes = SdfResult {
+    let spheres = SdfResult {
         material: Material::Matte,
         distance: {
-            let sdf = |p| sdf::cuboid(p, Vec3::splat(0.5));
-            sdf::ops::repeat::repeat_angular_y(p - vec3(0.0, 1.0, 0.0), 12.0, 16, sdf)
+            let f = |p| sdf::sphere(p, 0.5);
+            let sdf = |p| {
+                sdf::ops::repeat::repeat_angular_y(p, 0.58, 3, f)
+                    .min(sdf::sphere(p - vec3(0.0, 0.81, 0.0), 0.5))
+            };
+            sdf::ops::repeat::repeat_angular_y(p - vec3(0.0, 0.5, 0.0), 12.0, 16, sdf)
         },
     };
     let frame_dim = Vec3::splat(0.05);
@@ -70,7 +74,7 @@ fn sdf(p: Vec3, _time: f32) -> SdfResult {
             sdf::ops::repeat::repeat_angular_y(p - vec3(0.0, 0.8, 0.0), 4.0, 8, sdf)
         },
     };
-    plane.union(mirrors).union(mirror_frames).union(cubes)
+    plane.union(mirrors).union(mirror_frames).union(spheres)
 }
 
 struct RayMarchResult {
@@ -128,6 +132,18 @@ fn soft_shadows(ro: Vec3, rd: Vec3, time: f32) -> f32 {
     res
 }
 
+fn ambient_occlusion(pos: Vec3, normal: Vec3, time: f32) -> f32 {
+    const STEP_SIZE: f32 = 0.02;
+    let mut sum = 0.0;
+    let mut max_sum = 0.0;
+    for i in 1..6 {
+        let p = pos + normal * (i + 1) as f32 * STEP_SIZE;
+        sum += 1.0 / 2.0.powi(i) * sdf(p, time).distance;
+        max_sum += 1.0 / 2.0.powi(i) * (i + 1) as f32 * STEP_SIZE;
+    }
+    sum / max_sum
+}
+
 fn get_normal(p: Vec3, time: f32) -> Vec3 {
     let d = sdf(p, time).distance;
     let e = vec2(0.01, 0.0);
@@ -143,9 +159,11 @@ fn get_light(p: Vec3, time: f32) -> f32 {
     let time = time * 0.1;
     let light_pos = vec3(8.0 * time.sin(), 5.0, 8.0 * time.cos());
     let light_vector = (light_pos - p).normalize();
-    let normal_vector = get_normal(p, time);
-    let dif = saturate(light_vector.dot(normal_vector));
-    dif * soft_shadows(p, light_vector, time).max(0.1)
+    let normal = get_normal(p, time);
+    let dif = saturate(light_vector.dot(normal));
+    let ao = ambient_occlusion(p, normal, time);
+    let shadows = soft_shadows(p, light_vector, time);
+    dif.max(0.02) * ao.max(0.02) * shadows.max(0.05)
 }
 
 #[spirv(fragment)]
@@ -180,6 +198,7 @@ pub fn main_fs(
         vec3(0.1 * result.distance / p.y, 0.2, 0.1)
     } else {
         let dif = get_light(ro + rd * result.distance, constants.time);
+        // let dif = dif * ao;
         Vec3::splat(dif).lerp(vec3(0.95, 1.0, 0.95), num_mirrored as f32 * 0.0)
     };
 
