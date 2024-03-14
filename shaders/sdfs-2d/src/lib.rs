@@ -1,7 +1,7 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
 use push_constants::sdfs_2d::ShaderConstants;
-use sdf::grid::Grid;
+use sdf::grid::SdfGrid;
 use sdf_2d as sdf;
 use shared::*;
 use spirv_std::glam::{vec3, Vec2, Vec3, Vec4, Vec4Swizzles};
@@ -9,11 +9,12 @@ use spirv_std::glam::{vec3, Vec2, Vec3, Vec4, Vec4Swizzles};
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;
 
-fn sdf(p: Vec2, grid: &Grid, smooth: bool) -> f32 {
+fn sdf(p: Vec2, grid: &SdfGrid, smooth: bool) -> f32 {
+    let p = grid.clamp(p);
     if smooth {
-        grid.from_vec2_smooth(p)
+        grid.dist_smooth(p)
     } else {
-        grid.from_vec2(p)
+        grid.dist(p)
     }
 }
 
@@ -21,16 +22,15 @@ fn sdf(p: Vec2, grid: &Grid, smooth: bool) -> f32 {
 pub fn main_fs(
     #[spirv(frag_coord)] frag_coord: Vec4,
     #[spirv(push_constant)] constants: &ShaderConstants,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] grid: &Grid,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] grid: &SdfGrid,
     output: &mut Vec4,
 ) {
     let uv = from_pixels(frag_coord.xy(), constants.size);
-    let cursor = from_pixels(constants.cursor.into(), constants.size);
+    let cursor = constants.cursor.into();
     let smooth: bool = constants.smooth.into();
 
     let mut col = {
         let d = sdf(uv, grid, smooth);
-
         let mut col = if d < 0.0 {
             vec3(0.65, 0.85, 1.0)
         } else {
@@ -42,31 +42,33 @@ pub fn main_fs(
 
         if constants.mouse_button_pressed & 1 != 0 {
             let d = sdf(cursor, grid, smooth);
-            let thickness = 1.0 / constants.size.height as f32;
-            col = col
-                .lerp(
-                    vec3(1.0, 1.0, 0.0),
-                    smoothstep(thickness, 0.0, sdf::disk(uv - cursor, 0.01)),
-                )
-                .lerp(
-                    vec3(1.0, 1.0, 0.0),
-                    smoothstep(
-                        thickness,
-                        0.0,
-                        sdf::disk(uv - cursor, d.abs()).abs() - 0.0025,
-                    ),
-                );
+            let der: Vec2 = constants.derivative_at_cursor.into();
+            let p = uv - cursor;
+            col = col.lerp(
+                vec3(1.0, 1.0, 0.0),
+                smoothstep(
+                    0.001,
+                    0.0,
+                    sdf::disk(p, 0.008)
+                        .min(sdf::disk(p, d.abs()).abs())
+                        .min(sdf::finite_ray(
+                            p,
+                            der.normalize_or_zero() * d.signum(),
+                            d.abs(),
+                        ))
+                        - 0.0025,
+                ),
+            );
         }
 
         col
     };
 
-    let thickness = 10.0 / constants.size.height as f32;
     for i in 0..5 {
         let p: Vec2 = constants.points[i].into();
         col = col.lerp(
             vec3(1.0, 1.0, 1.0),
-            smoothstep(thickness, 0.0, sdf::disk(uv - p, 0.002)),
+            smoothstep(0.008, 0.0, sdf::disk(uv - p, 0.002)),
         )
     }
 

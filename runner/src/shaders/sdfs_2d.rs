@@ -9,10 +9,10 @@ use crate::{
 use bytemuck::Zeroable;
 use egui::{Context, CursorIcon};
 use glam::{vec2, UVec2, Vec2};
-use sdf::grid::*;
-use shared::fast_optional::Optional_f32;
+use sdf::grid::SdfGrid;
 use shared::push_constants::sdfs_2d::ShaderConstants;
 use shared::sdf_2d as sdf;
+use shared::{fast_optional::Optional_f32, from_pixels};
 use std::{
     f32::consts::PI,
     time::{Duration, Instant},
@@ -198,7 +198,7 @@ pub struct Controller {
     repeat: Repetition,
     params: Vec<Params>,
     prev_params: Params,
-    grid: Grid,
+    grid: SdfGrid,
     grid_needs_updating: bool,
     smooth: bool,
 }
@@ -220,7 +220,7 @@ impl crate::controller::Controller for Controller {
             repeat: Repetition::default(),
             params: Shape::iter().map(|shape| shape.default_params()).collect(),
             prev_params: Shape::Disk.default_params(),
-            grid: Grid::new(),
+            grid: SdfGrid::new(),
             grid_needs_updating: true,
             smooth: true,
         }
@@ -246,7 +246,7 @@ impl crate::controller::Controller for Controller {
         let num_points = self.shape.default_points().len();
         if let Some(i) = self.drag_point {
             self.params[self.shape as usize].ps[i] = rotate(
-                self.from_pixels(self.cursor),
+                from_pixels(self.cursor, self.size.into()),
                 self.params[self.shape as usize].rot,
             )
             .into();
@@ -255,7 +255,7 @@ impl crate::controller::Controller for Controller {
                 .iter()
                 .position(|p| {
                     (rotate((*p).into(), -self.params[self.shape as usize].rot)
-                        - self.from_pixels(self.cursor))
+                        - from_pixels(self.cursor, self.size.into()))
                     .length_squared()
                         < 0.0005
                 });
@@ -281,17 +281,19 @@ impl crate::controller::Controller for Controller {
         if self.params[self.shape as usize] != self.prev_params {
             self.grid_needs_updating = true;
         }
+        let cursor = self.grid.clamp(from_pixels(self.cursor, self.size.into()));
         self.elapsed = self.start.elapsed();
         self.shader_constants = ShaderConstants {
             size: self.size.into(),
             time: self.elapsed.as_secs_f32(),
-            cursor: self.cursor.into(),
+            cursor: cursor.into(),
             mouse_button_pressed: !(1
                 << (self.mouse_button_pressed && self.drag_point.is_none()) as u32),
             points: self.params[self.shape as usize]
                 .ps
                 .map(|p| rotate(p.into(), -self.params[self.shape as usize].rot).into()),
             smooth: self.smooth.into(),
+            derivative_at_cursor: self.grid.derivative(cursor).into(),
         };
         self.prev_params = self.params[self.shape as usize];
     }
@@ -343,7 +345,9 @@ impl crate::controller::Controller for Controller {
         self.repeat.ui(ui);
         if self.grid_needs_updating {
             self.grid_needs_updating = false;
-            self.update_grid();
+            let shape = self.shape;
+            let params = self.params();
+            self.grid.update(|p| sdf(p, shape, params));
             self.signal_new_buffers(event_proxy);
         }
     }
@@ -360,12 +364,6 @@ impl crate::controller::Controller for Controller {
 }
 
 impl Controller {
-    fn from_pixels(&self, p: Vec2) -> Vec2 {
-        let p = vec2(p.x, -p.y);
-        (p - 0.5 * vec2(self.size.width as f32, -(self.size.height as f32)))
-            / self.size.height as f32
-    }
-
     fn params(&self) -> Params {
         Params {
             pad: self.pad.into(),
@@ -375,83 +373,70 @@ impl Controller {
         }
     }
 
-    fn update_grid(&mut self) {
-        const HALF_CELL_SIZE: f32 = 0.5 / BASE as f32;
-        for i in 0..NUM_X {
-            for j in 0..NUM_Y {
-                let x = (i as f32 - 0.5 * NUM_X as f32) / BASE as f32 + HALF_CELL_SIZE;
-                let y = (j as f32 - 0.5 * NUM_Y as f32) / BASE as f32 + HALF_CELL_SIZE;
-                let value = self.sdf(vec2(x, y));
-                self.grid.set(i, j, value);
-            }
-        }
-    }
-
     fn signal_new_buffers(&self, event_proxy: &EventLoopProxy<UserEvent>) {
         if event_proxy.send_event(UserEvent::NewBuffersReady).is_err() {
             panic!("Event loop dead");
         }
     }
+}
 
-    fn sdf(&self, mut p: Vec2) -> f32 {
-        use Shape::*;
-        let params = self.params();
-        let dim: Vec2 = params.dims.into();
-        let radius = dim.x;
-        let p0: Vec2 = params.ps[0].into();
-        let p1: Vec2 = params.ps[1].into();
-        let p2: Vec2 = params.ps[2].into();
-        let p3: Vec2 = params.ps[3].into();
-        let p4: Vec2 = params.ps[4].into();
-        p = p.rotate(Vec2::from_angle(params.rot));
+fn sdf(mut p: Vec2, shape: Shape, params: Params) -> f32 {
+    use Shape::*;
+    let dim: Vec2 = params.dims.into();
+    let radius = dim.x;
+    let p0: Vec2 = params.ps[0].into();
+    let p1: Vec2 = params.ps[1].into();
+    let p2: Vec2 = params.ps[2].into();
+    let p3: Vec2 = params.ps[3].into();
+    let p4: Vec2 = params.ps[4].into();
+    p = p.rotate(Vec2::from_angle(params.rot));
 
-        let f = |p| match self.shape {
-            Disk => sdf::disk(p, radius),
-            Rectangle => sdf::rectangle(p, dim),
-            EquilateralTriangle => sdf::equilateral_triangle(p, radius),
-            IsoscelesTriangle => sdf::isosceles_triangle(p, dim),
-            Triangle => sdf::triangle(p, p0, p1, p2),
-            Capsule => sdf::capsule(p, p0, p1, radius),
-            Torus => sdf::torus(p, dim),
-            Line => sdf::line(p, Vec2::Y),
-            Plane => sdf::plane(p, Vec2::Y),
-            LineSegment => sdf::line_segment(p, p0, p1),
-            Ray => sdf::ray(p - p0, Vec2::X),
-            Hexagon => sdf::hexagon(p, radius),
-            Pentagon => sdf::pentagon(p, radius),
-            Polygon => sdf::polygon(p, [p0, p1, p2, p3, p4]),
-            Cross => sdf::cross(p, dim),
-        };
+    let f = |p| match shape {
+        Disk => sdf::disk(p, radius),
+        Rectangle => sdf::rectangle(p, dim),
+        EquilateralTriangle => sdf::equilateral_triangle(p, radius),
+        IsoscelesTriangle => sdf::isosceles_triangle(p, dim),
+        Triangle => sdf::triangle(p, p0, p1, p2),
+        Capsule => sdf::capsule(p, p0, p1, radius),
+        Torus => sdf::torus(p, dim),
+        Line => sdf::line(p, Vec2::Y),
+        Plane => sdf::plane(p, Vec2::Y),
+        LineSegment => sdf::line_segment(p, p0, p1),
+        Ray => sdf::ray(p - p0, Vec2::X),
+        Hexagon => sdf::hexagon(p, radius),
+        Pentagon => sdf::pentagon(p, radius),
+        Polygon => sdf::polygon(p, [p0, p1, p2, p3, p4]),
+        Cross => sdf::cross(p, dim),
+    };
 
-        let mut d = {
-            let RepetitionData {
-                current,
-                dim,
-                n1,
-                n2,
-            } = params.repeat;
-            use sdf::ops::{fast_repeat, repeat};
-            use RepetitionValue::*;
-            match current {
-                None => f(p),
-                Unlimited => repeat::Repeat::<2>::repeat_xy(p, dim, f),
-                Limited => repeat::RepeatLimited::<2>::repeat_xy(p, dim, n1, n2, f),
-                Rectangular => f(fast_repeat::repeat_rectangular(p, dim.x, n1)),
-                Angular => repeat::repeat_angular(p, dim.x, n1.x, f),
-                Mirrored => f(fast_repeat::repeat_mirrored(p, dim)),
-            }
-        };
-
-        if params.pad.has_value() {
-            d = sdf::ops::pad(d, params.pad.value)
+    let mut d = {
+        let RepetitionData {
+            current,
+            dim,
+            n1,
+            n2,
+        } = params.repeat;
+        use sdf::ops::{fast_repeat, repeat};
+        use RepetitionValue::*;
+        match current {
+            None => f(p),
+            Unlimited => repeat::Repeat::<2>::repeat_xy(p, dim, f),
+            Limited => repeat::RepeatLimited::<2>::repeat_xy(p, dim, n1, n2, f),
+            Rectangular => f(fast_repeat::repeat_rectangular(p, dim.x, n1)),
+            Angular => repeat::repeat_angular(p, dim.x, n1.x, f),
+            Mirrored => f(fast_repeat::repeat_mirrored(p, dim)),
         }
+    };
 
-        if params.onion.has_value() {
-            d = sdf::ops::onion(d, params.onion.value)
-        }
-
-        d
+    if params.pad.has_value() {
+        d = sdf::ops::pad(d, params.pad.value)
     }
+
+    if params.onion.has_value() {
+        d = sdf::ops::onion(d, params.onion.value)
+    }
+
+    d
 }
 
 fn rotate(p: Vec2, angle: f32) -> Vec2 {

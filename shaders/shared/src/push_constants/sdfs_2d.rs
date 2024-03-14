@@ -11,4 +11,5 @@ pub struct ShaderConstants {
     pub mouse_button_pressed: u32,
     pub points: [[f32; 2]; 5],
     pub smooth: Bool,
+    pub derivative_at_cursor: Vec2,
 }

@@ -38,6 +38,11 @@ pub fn ray(p: Vec2, d: Vec2) -> f32 {
     p.distance(d * p.dot(d).max(0.0))
 }
 
+// `d` must be normalized
+pub fn finite_ray(p: Vec2, d: Vec2, m: f32) -> f32 {
+    p.distance(d * p.dot(d).clamp(0.0, m))
+}
+
 pub fn line_segment(p: Vec2, a: Vec2, b: Vec2) -> f32 {
     p.distance(a + (p - a).project_onto_segment(b - a))
 }

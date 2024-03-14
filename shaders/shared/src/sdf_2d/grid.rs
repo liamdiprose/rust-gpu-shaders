@@ -1,108 +1,96 @@
-use crate::functional::tuple::*;
-use bytemuck::{Pod, Zeroable};
+use spirv_std::glam::{vec2, Vec2};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 
-// Only need padding of 2 but Gridchunk is size 4 so this simplifies things
-pub const SMOOTH_PADDING: usize = 4;
-pub const BASE: usize = 128 - SMOOTH_PADDING;
-pub const NUM_Y: usize = BASE + SMOOTH_PADDING;
-pub const NUM_X: usize = (BASE + SMOOTH_PADDING) * 3 + SMOOTH_PADDING;
+const SMOOTH_PADDING: usize = 2;
+const BASE: usize = 64 - SMOOTH_PADDING;
+const AR: usize = 3;
+const NUM_Y: usize = BASE + SMOOTH_PADDING;
+const NUM_X: usize = BASE * AR + SMOOTH_PADDING;
+const HALF_CELL_SIZE: f32 = 0.5 / BASE as f32;
 
-#[repr(C)]
-pub struct Grid {
-    pub grid: [[GridChunk; NUM_Y / 4]; NUM_X],
+pub struct SdfGrid {
+    pub grid: [[f32; NUM_Y]; NUM_X],
 }
 
 #[cfg(not(target_arch = "spirv"))]
-impl Grid {
-    pub fn set(&mut self, i: usize, j: usize, value: f32) {
-        self.grid[i][j / 4][j % 4] = value;
-    }
-
+impl SdfGrid {
     pub fn new() -> Self {
         Self {
-            grid: [[GridChunk::zeroed(); NUM_Y / 4]; NUM_X],
+            grid: [[0.0; NUM_Y]; NUM_X],
+        }
+    }
+
+    pub fn update<F>(&mut self, sdf: F)
+    where
+        F: Fn(Vec2) -> f32,
+    {
+        for i in 0..NUM_X {
+            for j in 0..NUM_Y {
+                self.grid[i][j] = sdf(vec2(
+                    i as f32 - 0.5 * NUM_X as f32,
+                    j as f32 - 0.5 * NUM_Y as f32,
+                ) / BASE as f32
+                    + HALF_CELL_SIZE);
+            }
         }
     }
 }
 
-impl Grid {
-    pub fn get(&self, i: usize, j: usize) -> f32 {
-        self.grid[i][j / 4].index(j % 4)
+impl SdfGrid {
+    fn indices(&self, p: Vec2) -> Vec2 {
+        vec2(
+            p.x * BASE as f32 + 0.5 * NUM_X as f32,
+            (p.y + 0.5) * BASE as f32 + 0.5 * SMOOTH_PADDING as f32,
+        )
     }
 
-    fn indices_from_vec2(&self, p: spirv_std::glam::Vec2) -> spirv_std::glam::Vec2 {
-        let i = p.x * BASE as f32 + 0.5 * NUM_X as f32;
-        let j = (p.y + 0.5) * BASE as f32 + 0.5 * SMOOTH_PADDING as f32;
-        spirv_std::glam::vec2(i, j)
+    pub fn clamp(&self, p: Vec2) -> Vec2 {
+        let v = vec2(AR as f32, 1.0) * 0.5;
+        p.clamp(-v, v - 0.001)
     }
 
-    pub fn from_vec2(&self, p: spirv_std::glam::Vec2) -> f32 {
-        let ij = self.indices_from_vec2(p);
-        self.get(ij.x as usize, ij.y as usize)
+    pub fn dist(&self, p: Vec2) -> f32 {
+        let Vec2 { x, y } = self.indices(p);
+        self.grid[x as usize][y as usize]
     }
 
-    pub fn from_vec2_smooth(&self, p: spirv_std::glam::Vec2) -> f32 {
-        let ij = self.indices_from_vec2(p);
-        let indices_and_scalars = |x: f32| {
-            (
-                ((x - 0.5) as usize, (0.5 - x.fract()).max(0.0)),
-                (x as usize, 0.5 + ((x - 0.5).fract() - 0.5).abs()),
-                ((x + 0.5) as usize, (x.fract() - 0.5).max(0.0)),
-            )
-        };
-        indices_and_scalars(ij.x)
-            .map(|a| indices_and_scalars(ij.y).map(|b| (a, b)))
-            .map(|a| a.map(|((i, s1), (j, s2))| s1 * s2 * self.get(i, j)).sum())
-            .sum()
+    pub fn dist_smooth(&self, p: Vec2) -> f32 {
+        let Vec2 { x, y } = self.indices(p);
+
+        let left_index = (x - 0.5) as usize;
+        let middle_index_x = x as usize;
+        let right_index = (x + 0.5) as usize;
+        let left_scale = (0.5 - x.fract()).max(0.0);
+        let middle_scale_x = 0.5 + ((x - 0.5).fract() - 0.5).abs();
+        let right_scale = (x.fract() - 0.5).max(0.0);
+
+        let bot_index = (y - 0.5) as usize;
+        let middle_index_y = y as usize;
+        let top_index = (y + 0.5) as usize;
+        let bot_scale = (0.5 - y.fract()).max(0.0);
+        let middle_scale_y = 0.5 + ((y - 0.5).fract() - 0.5).abs();
+        let top_scale = (y.fract() - 0.5).max(0.0);
+
+        left_scale
+            * (bot_scale * self.grid[left_index][bot_index]
+                + middle_scale_y * self.grid[left_index][middle_index_y]
+                + top_scale * self.grid[left_index][top_index])
+            + middle_scale_x
+                * (bot_scale * self.grid[middle_index_x][bot_index]
+                    + middle_scale_y * self.grid[middle_index_x][middle_index_y]
+                    + top_scale * self.grid[middle_index_x][top_index])
+            + right_scale
+                * (bot_scale * self.grid[right_index][bot_index]
+                    + middle_scale_y * self.grid[right_index][middle_index_y]
+                    + top_scale * self.grid[right_index][top_index])
     }
-}
 
-#[derive(Clone, Copy, Pod, Zeroable)]
-#[repr(C)]
-pub struct GridChunk {
-    pub x0: f32,
-    pub x1: f32,
-    pub x2: f32,
-    pub x3: f32,
-}
-
-impl GridChunk {
-    pub fn index(&self, index: usize) -> f32 {
-        match index {
-            0 => self.x0,
-            1 => self.x1,
-            2 => self.x2,
-            3 => self.x3,
-            _ => panic!(),
-        }
-    }
-}
-
-#[cfg(not(target_arch = "spirv"))]
-impl core::ops::Index<usize> for GridChunk {
-    type Output = f32;
-    fn index(&self, index: usize) -> &Self::Output {
-        match index {
-            0 => &self.x0,
-            1 => &self.x1,
-            2 => &self.x2,
-            3 => &self.x3,
-            _ => panic!(),
-        }
-    }
-}
-
-#[cfg(not(target_arch = "spirv"))]
-impl core::ops::IndexMut<usize> for GridChunk {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        match index {
-            0 => &mut self.x0,
-            1 => &mut self.x1,
-            2 => &mut self.x2,
-            3 => &mut self.x3,
-            _ => panic!(),
-        }
+    pub fn derivative(&self, p: Vec2) -> Vec2 {
+        const E: f32 = HALF_CELL_SIZE;
+        vec2(
+            self.dist_smooth(p - Vec2::X * E) - self.dist_smooth(p + Vec2::X * E),
+            self.dist_smooth(p - Vec2::Y * E) - self.dist_smooth(p + Vec2::Y * E),
+        ) / (E * 2.0)
     }
 }
