@@ -1,7 +1,8 @@
 use crate::window::UserEvent;
 use bytemuck::Zeroable;
-use egui::{vec2, Context, Vec2};
-use shared::push_constants::koch_snowflake::ShaderConstants;
+use egui::Context;
+use glam::{vec2, Vec2};
+use shared::{from_pixels, push_constants::koch_snowflake::ShaderConstants};
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
     event_loop::EventLoopProxy,
@@ -34,10 +35,8 @@ impl crate::controller::Controller for Controller {
 
     fn update(&mut self) {
         self.shader_constants = ShaderConstants {
-            width: self.size.width,
-            height: self.size.height,
-            cursor_x: self.cursor.x,
-            cursor_y: self.cursor.y,
+            size: self.size.into(),
+            cursor: from_pixels(self.cursor, self.size.into()).into(),
             use_antisnowflake: self.use_antisnowflake as u32,
         };
     }

@@ -39,7 +39,7 @@ fn sdf(p: Vec2, time: f32) -> f32 {
             0.005
         ),
         sdf::rectangle(p - vec2(0.0, -0.745), vec2(0.2, 0.4)),
-        sdf::plane(p - vec2(0.0, -0.4), Vec2::X),
+        sdf::plane(p - vec2(0.0, -0.4), Vec2::Y),
     )
 }
 
@@ -58,7 +58,7 @@ pub fn main_fs(
     let cursor = from_pixels(constants.cursor_x, constants.cursor_y, constants);
     let ro = from_pixels(constants.drag_end_x, constants.drag_end_y, constants);
 
-    let rd = (0.99999 * cursor - ro).normalize();
+    let rd = (0.99999 * cursor - ro).normalize_or_zero();
 
     let mut col = {
         let d = sdf(uv, constants.time);

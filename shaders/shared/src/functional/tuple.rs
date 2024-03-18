@@ -34,6 +34,13 @@ macro_rules! tuple_impls {
                 reduce!((f32::add), $(self.$idx),+)
             }
         }
+        impl Sum for ($(replace_expr!($idx Vec2),)+)
+        {
+            type Output = Vec2;
+            fn sum(self) -> Self::Output {
+                reduce!((Vec2::add), $(self.$idx),+)
+            }
+        }
         impl Product for ($(replace_expr!($idx f32),)+)
         {
             type Output = f32;

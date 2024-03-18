@@ -1,4 +1,5 @@
 use bytemuck::Zeroable;
+use glam::vec2;
 use shared::push_constants::sierpinski_triangle::ShaderConstants;
 use winit::{dpi::PhysicalSize, event::MouseScrollDelta};
 
@@ -43,11 +44,9 @@ impl crate::controller::Controller for Controller {
         self.zoom = 0.85_f64.powf(scroll) as f32;
 
         self.shader_constants = ShaderConstants {
-            width: self.size.width,
-            height: self.size.height,
+            size: self.size.into(),
             zoom: self.zoom,
-            x: -0.08443636,
-            y: -0.087451585,
+            dim: vec2(-0.08443636, -0.087451585).into(),
         };
     }
 

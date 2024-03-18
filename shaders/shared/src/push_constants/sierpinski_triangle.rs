@@ -1,11 +1,10 @@
+use super::{Size, Vec2};
 use bytemuck::{Pod, Zeroable};
 
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
 pub struct ShaderConstants {
-    pub width: u32,
-    pub height: u32,
+    pub size: Size,
     pub zoom: f32,
-    pub x: f32,
-    pub y: f32,
+    pub dim: Vec2,
 }

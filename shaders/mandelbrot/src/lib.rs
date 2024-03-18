@@ -3,7 +3,7 @@
 use complex::Complex;
 use push_constants::mandelbrot::ShaderConstants;
 use shared::*;
-use spirv_std::glam::{vec4, Vec4};
+use spirv_std::glam::{Vec2, Vec3, Vec4, Vec4Swizzles};
 use spirv_std::spirv;
 
 #[spirv(fragment)]
@@ -12,14 +12,9 @@ pub fn main_fs(
     #[spirv(push_constant)] constants: &ShaderConstants,
     output: &mut Vec4,
 ) {
-    let coord = Complex::new(
-        frag_coord.x + constants.translate_x,
-        frag_coord.y + constants.translate_y,
-    );
-
-    let uv = constants.zoom
-        * (coord - 0.5 * Complex::new(constants.width as f32, constants.height as f32))
-        / constants.height as f32;
+    let translate: Vec2 = constants.translate.into();
+    let uv: Complex =
+        (constants.zoom * from_pixels(frag_coord.xy() + translate, constants.size)).into();
 
     let mut z = Complex::ZERO;
     let mut n = constants.num_iterations;
@@ -28,8 +23,8 @@ pub fn main_fs(
         n -= 1;
     }
 
-    let c = n as f32 / 35.0;
-    *output = vec4(c, c, c, 1.0);
+    let c = n as f32 / constants.num_iterations as f32;
+    *output = Vec3::splat(c).extend(1.0);
 }
 
 #[spirv(vertex)]

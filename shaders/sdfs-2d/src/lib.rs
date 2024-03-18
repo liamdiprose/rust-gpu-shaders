@@ -1,6 +1,6 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
-use push_constants::sdfs_2d::ShaderConstants;
+use push_constants::sdfs_2d::{ShaderConstants, MAX_NUM_POINTS};
 use sdf::grid::SdfGrid;
 use sdf_2d as sdf;
 use shared::*;
@@ -29,47 +29,40 @@ pub fn main_fs(
     let cursor = constants.cursor.into();
     let smooth: bool = constants.smooth.into();
 
-    let mut col = {
-        let d = sdf(uv, grid, smooth);
-        let mut col = if d < 0.0 {
-            vec3(0.65, 0.85, 1.0)
-        } else {
-            vec3(0.9, 0.6, 0.3)
-        };
-        col *= 1.0 - (-6.0 * d.abs()).exp();
-        col *= 0.8 + 0.2 * (150.0 * d).cos();
-        col = col.lerp(Vec3::ONE, 1.0 - smoothstep(0.0, 0.01, d.abs()));
-
-        if constants.mouse_button_pressed & 1 != 0 {
-            let d = sdf(cursor, grid, smooth);
-            let der: Vec2 = constants.derivative_at_cursor.into();
-            let p = uv - cursor;
-            col = col.lerp(
-                vec3(1.0, 1.0, 0.0),
-                smoothstep(
-                    0.001,
-                    0.0,
-                    sdf::disk(p, 0.008)
-                        .min(sdf::disk(p, d.abs()).abs())
-                        .min(sdf::finite_ray(
-                            p,
-                            der.normalize_or_zero() * d.signum(),
-                            d.abs(),
-                        ))
-                        - 0.0025,
-                ),
-            );
-        }
-
-        col
+    let d = sdf(uv, grid, smooth);
+    let mut col = if d < 0.0 {
+        vec3(0.65, 0.85, 1.0)
+    } else {
+        vec3(0.9, 0.6, 0.3)
     };
+    col *= 1.0 - (-6.0 * d.abs()).exp();
+    col *= 0.8 + 0.2 * (150.0 * d).cos();
+    col = col.lerp(Vec3::ONE, 1.0 - smoothstep(0.0, 0.01, d.abs()));
 
-    for i in 0..5 {
-        let p: Vec2 = constants.points[i].into();
+    if constants.mouse_button_pressed & 1 != 0 {
+        let d = sdf(cursor, grid, smooth);
+        let der: Vec2 = constants.derivative_at_cursor.into();
+        let p = uv - cursor;
         col = col.lerp(
-            vec3(1.0, 1.0, 1.0),
-            smoothstep(0.008, 0.0, sdf::disk(uv - p, 0.002)),
-        )
+            vec3(1.0, 1.0, 0.0),
+            smoothstep(
+                0.001,
+                0.0,
+                sdf::disk(p, 0.008)
+                    .min(sdf::disk(p, d.abs()).abs())
+                    .min(sdf::finite_ray(
+                        p,
+                        der.normalize_or_zero() * d.signum(),
+                        d.abs(),
+                    ))
+                    - 0.0025,
+            ),
+        );
+    }
+
+    for i in 0..MAX_NUM_POINTS {
+        let p: Vec2 = constants.points[i].into();
+        col = col.lerp(Vec3::ONE, smoothstep(0.008, 0.0, sdf::disk(uv - p, 0.002)))
     }
 
     *output = col.extend(1.0);

@@ -3,7 +3,7 @@
 use push_constants::sierpinski_triangle::ShaderConstants;
 use shared::sdf_2d as sdf;
 use shared::*;
-use spirv_std::glam::{vec2, vec3, Vec2, Vec2Swizzles, Vec4};
+use spirv_std::glam::{vec2, vec3, Vec2, Vec2Swizzles, Vec4, Vec4Swizzles};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;
@@ -25,22 +25,18 @@ fn sierpinski_triangle(mut p: Vec2, mut r: f32, m: u32) -> f32 {
     d
 }
 
-fn from_pixels(x: f32, y: f32, constants: &ShaderConstants) -> Vec2 {
-    constants.zoom * (vec2(x, -y) - 0.5 * vec2(constants.width as f32, -(constants.height as f32)))
-        / constants.height as f32
-}
-
 #[spirv(fragment)]
 pub fn main_fs(
     #[spirv(frag_coord)] frag_coord: Vec4,
     #[spirv(push_constant)] constants: &ShaderConstants,
     output: &mut Vec4,
 ) {
-    let coord = vec2(frag_coord.x, frag_coord.y);
-    let uv = from_pixels(coord.x, coord.y, constants);
+    let uv = constants.zoom * from_pixels(frag_coord.xy(), constants.size);
+    let dim: Vec2 = constants.dim.into();
 
-    let d = sierpinski_triangle(uv - vec2(constants.x, constants.y), 0.25, 22);
-    let col = vec3(0.9, 0.6, 0.4) * smoothstep(constants.zoom / constants.height as f32, 0.0, d);
+    let d = sierpinski_triangle(uv - dim, 0.25, 22);
+    let thickness = constants.zoom / constants.size.height as f32;
+    let col = vec3(0.9, 0.6, 0.4) * smoothstep(thickness, 0.0, d);
 
     *output = col.extend(1.0);
 }

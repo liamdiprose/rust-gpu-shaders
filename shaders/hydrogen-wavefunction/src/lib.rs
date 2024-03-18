@@ -59,11 +59,8 @@ pub fn main_fs(
     #[spirv(push_constant)] constants: &ShaderConstants,
     output: &mut Vec4,
 ) {
-    let translate = vec2(constants.translate_x, constants.translate_y) / constants.height as f32;
-
-    let uv = (Complex::from(frag_coord.xy())
-        - 0.5 * Complex::new(constants.width as f32, constants.height as f32))
-        / constants.height as f32;
+    let translate: Vec2 = constants.translate.into();
+    let uv = from_pixels(frag_coord.xy(), constants.size);
 
     let rm = Mat3::from_rotation_y(translate.x).mul_mat3(&Mat3::from_rotation_x(translate.y));
     let ro = rm * Vec2::ZERO.extend(-constants.camera_distance);

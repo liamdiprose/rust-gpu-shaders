@@ -38,15 +38,15 @@ pub fn sdf_shape(mut p: Vec3, shape: Shape, params: Params) -> f32 {
     let orientation = Vec3::Y;
 
     if params.repeat[0].has_value() {
-        p = sdf::ops::repeat_x(p, params.repeat[0].value)
+        p = sdf::ops::fast_repeat::repeat_x(p, params.repeat[0].value)
     }
 
     if params.repeat[1].has_value() {
-        p = sdf::ops::repeat_y(p, params.repeat[1].value)
+        p = sdf::ops::fast_repeat::repeat_y(p, params.repeat[1].value)
     }
 
     if params.repeat[2].has_value() {
-        p = sdf::ops::repeat_z(p, params.repeat[2].value)
+        p = sdf::ops::fast_repeat::repeat_z(p, params.repeat[2].value)
     }
 
     let mut d = match shape {

@@ -10,7 +10,7 @@ use bytemuck::Zeroable;
 use egui::{Context, CursorIcon};
 use glam::{vec2, UVec2, Vec2};
 use sdf::grid::SdfGrid;
-use shared::push_constants::sdfs_2d::ShaderConstants;
+use shared::push_constants::sdfs_2d::{ShaderConstants, MAX_NUM_POINTS};
 use shared::sdf_2d as sdf;
 use shared::{fast_optional::Optional_f32, from_pixels};
 use std::{
@@ -100,7 +100,7 @@ impl Shape {
 
     fn default_params(&self) -> Params {
         let default_ps = self.default_points();
-        let mut ps = [[1e10; 2]; 5];
+        let mut ps = [[1e10; 2]; MAX_NUM_POINTS];
         for i in 0..default_ps.len() {
             ps[i] = default_ps[i];
         }
@@ -176,7 +176,7 @@ impl Default for RepetitionData {
 struct Params {
     pub shape: Shape,
     pub dims: [f32; 2],
-    pub ps: [[f32; 2]; 5],
+    pub ps: [[f32; 2]; MAX_NUM_POINTS],
     pub rot: f32,
     pub repeat: RepetitionData,
     pub onion: Optional_f32,
@@ -257,7 +257,7 @@ impl crate::controller::Controller for Controller {
                     (rotate((*p).into(), -self.params[self.shape as usize].rot)
                         - from_pixels(self.cursor, self.size.into()))
                     .length_squared()
-                        < 0.0005
+                        < 0.0003
                 });
         }
     }
