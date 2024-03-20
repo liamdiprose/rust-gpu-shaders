@@ -42,3 +42,34 @@ pub fn ray_intersect_aabb(ro: Vec3, rd: Vec3, a: Vec3, b: Vec3) -> bool {
     let t2 = (b - ro) / rd;
     t1.max(t2).min_element() > t1.min(t2).max_element()
 }
+
+pub fn ray_intersect_capsule(ro: Vec3, rd: Vec3, pa: Vec3, pb: Vec3, r: f32) -> f32 {
+    let ba = pb - pa;
+    let oa = ro - pa;
+    let baba = ba.dot(ba);
+    let bard = ba.dot(rd);
+    let baoa = ba.dot(oa);
+    let rdoa = rd.dot(oa);
+    let oaoa = oa.dot(oa);
+    let a = baba - bard * bard;
+    let b = baba * rdoa - baoa * bard;
+    let c = baba * oaoa - baoa * baoa - r * r * baba;
+    let h = b * b - a * c;
+    if h >= 0.0 {
+        let t = (-b - h.sqrt()) / a;
+        let y = baoa + t * bard;
+        // body
+        if y > 0.0 && y < baba {
+            return t;
+        }
+        // caps
+        let oc = if y <= 0.0 { oa } else { ro - pb };
+        let b = rd.dot(oc);
+        let c = oc.dot(oc) - r * r;
+        let h = b * b - c;
+        if h > 0.0 {
+            return -b - h.sqrt();
+        }
+    }
+    -1.0
+}

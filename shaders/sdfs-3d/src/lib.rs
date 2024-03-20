@@ -4,6 +4,7 @@ use crate::functional::vec::*;
 use ray_intersection::ray_intersects_sphere;
 use shared::{
     push_constants::sdfs_3d::{Params, ShaderConstants, Shape},
+    ray_intersection::ray_intersect_capsule,
     sdf_3d::{self as sdf, ops},
     *,
 };
@@ -90,7 +91,7 @@ fn ray_march(
     slice_z: f32,
     params: Params,
     cursor: Vec3,
-    cursor_d: f32,
+    abs_cursor_d: f32,
     mouse_pressed: bool,
 ) -> (f32, RayMarchResult) {
     use RayMarchResult::*;
@@ -101,14 +102,14 @@ fn ray_march(
         let slice_d = sdf_slice(p, slice_z);
         let sliced_shape_d = ops::difference(sdf_shape(p, shape, params), slice_d);
         let ds = if mouse_pressed {
-            let sliced_ball_d = ops::difference(sdf_ball(p, cursor, cursor_d), slice_d);
+            let sliced_ball_d = ops::difference(sdf_ball(p, cursor, abs_cursor_d), slice_d);
             sliced_shape_d.min(sliced_ball_d)
         } else {
             sliced_shape_d
         };
         d0 += ds;
         if ds < SURF_DIST {
-            let sliced_ball_d = ops::difference(sdf_ball(p, cursor, cursor_d), slice_d);
+            let sliced_ball_d = ops::difference(sdf_ball(p, cursor, abs_cursor_d), slice_d);
             return (
                 d0,
                 if mouse_pressed && ds == sliced_ball_d {
@@ -140,13 +141,13 @@ fn ray_march_distance_texture(
     rd: Vec3,
     slice_z: f32,
     cursor: Vec3,
-    cursor_d: f32,
+    abs_cursor_d: f32,
 ) -> f32 {
     let mut d0 = 0.0;
 
     for _ in 0..MAX_STEPS {
         let p = ro + rd * d0;
-        let ds = ops::difference(sdf::sphere(p - cursor, cursor_d), sdf_slice(p, slice_z));
+        let ds = ops::difference(sdf::sphere(p - cursor, abs_cursor_d), sdf_slice(p, slice_z));
         d0 += ds;
         if ds < SURF_DIST || d0 > MAX_DIST {
             break;
@@ -281,6 +282,36 @@ pub fn main_fs(
         )
         .lerp(Vec3::ONE, 1.0 - smoothstep(0.0, 0.005, slice_d.abs()))
     };
+
+    let d2 = if mouse_pressed {
+        let der = {
+            let e = 0.01;
+            vec3(
+                sdf_shape(cursor - e * Vec3::X, shape, constants.params)
+                    - sdf_shape(cursor + e * Vec3::X, shape, constants.params),
+                sdf_shape(cursor - e * Vec3::Y, shape, constants.params)
+                    - sdf_shape(cursor + e * Vec3::Y, shape, constants.params),
+                sdf_shape(cursor - e * Vec3::Z, shape, constants.params)
+                    - sdf_shape(cursor + e * Vec3::Z, shape, constants.params),
+            ) / (2.0 * e)
+        };
+        let r = (cursor_d.abs() / 8.0).min(0.01);
+        let pa = cursor;
+        let pb = cursor + der.normalize_or_zero() * cursor_d;
+        ray_intersect_capsule(ro, rd, pa, pb, r)
+    } else {
+        0.0
+    };
+    if d2 > 0.0 {
+        let p2 = ro + rd * d2;
+        let x = (p2.distance(cursor) * PI * 8.0 / cursor_d).sin().abs();
+        let base = if ray_march_result == RayMarchResult::Shape {
+            col + YELLOW * 0.1
+        } else {
+            YELLOW
+        };
+        col = base * x;
+    }
 
     for i in 0..2 {
         let p2: Vec3 = constants.params.ps[i].into();
