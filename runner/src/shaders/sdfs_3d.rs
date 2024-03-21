@@ -6,7 +6,7 @@ use glam::{vec2, Mat3, Vec2, Vec3};
 use shared::{
     from_pixels,
     push_constants::sdfs_3d::{Params, ShaderConstants, Shape},
-    ray_intersection::ray_intersects_sphere,
+    ray_intersection::ray_intersect_sphere,
 };
 use std::{f32::consts::PI, time::Instant};
 use strum::IntoEnumIterator;
@@ -101,7 +101,7 @@ impl crate::controller::Controller for Controller {
                 .normalize();
             self.can_drag = self.params[self.shape as usize].ps[0..num_points as usize]
                 .iter()
-                .position(|p| ray_intersects_sphere(ro, rd, (*p).into(), 0.01));
+                .position(|p| ray_intersect_sphere(ro, rd, (*p).into(), 0.01));
         }
         if self.mouse_button_pressed & (1 << 2) != 0 {
             self.camera += PI * (self.cursor - self.prev_cursor) / self.size.height as f32;

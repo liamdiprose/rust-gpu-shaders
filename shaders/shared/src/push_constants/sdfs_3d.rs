@@ -113,11 +113,13 @@ impl Shape {
     }
 }
 
+pub const MAX_NUM_POINTS: usize = 2;
+
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
 pub struct Params {
     pub dims: [f32; 6],
-    pub ps: [[f32; 3]; 2],
+    pub ps: [[f32; 3]; MAX_NUM_POINTS],
     pub onion: Optional_f32,
     pub pad: Optional_f32,
     pub repeat: [Optional_f32; 3],

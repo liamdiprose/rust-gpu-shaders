@@ -2,7 +2,7 @@ use spirv_std::glam::{vec2, vec3, Vec2, Vec2Swizzles, Vec3, Vec3Swizzles};
 #[cfg_attr(not(target_arch = "spirv"), allow(unused_imports))]
 use spirv_std::num_traits::Float;
 
-pub fn ray_intersects_sphere(ro: Vec3, rd: Vec3, p: Vec3, r: f32) -> bool {
+pub fn ray_intersect_sphere(ro: Vec3, rd: Vec3, p: Vec3, r: f32) -> bool {
     let v = ro - p;
     let b = 2.0 * rd.dot(v);
     let c = v.dot(v) - r * r;
@@ -18,6 +18,26 @@ pub fn ray_intersects_sphere(ro: Vec3, rd: Vec3, p: Vec3, r: f32) -> bool {
         }
     }
     false
+}
+
+pub fn ray_intersect_hemisphere(ro: Vec3, rd: Vec3, p: Vec3, n: Vec3, ra: f32) -> f32 {
+    let oc = ro - p;
+    let b = oc.dot(rd);
+    let qc = oc - b * rd;
+    let h = ra * ra - qc.dot(qc);
+    if h < 0.0 {
+        0.0
+    } else {
+        let h = h.sqrt();
+        let v = vec2(-b - h, -b + h);
+        if (ro + rd * v.x - p).dot(n) > 0.0 {
+            v.x
+        } else if (ro + rd * v.y - p).dot(n) > 0.0 {
+            ((p - ro) / rd).dot(n)
+        } else {
+            0.0
+        }
+    }
 }
 
 pub fn ray_intersect_box_frame(ro: Vec3, rd: Vec3, dim: Vec2) -> bool {
