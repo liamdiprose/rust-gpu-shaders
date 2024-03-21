@@ -14,17 +14,12 @@
 
 (define sdf (disk 0.3))
 
-(define (run-sdf-iter grid i j)
-  (cond
-   ((= j NUM_Y) grid)
-   ((= i NUM_X) (run-sdf-iter grid 0 (+ j 1)))
-   (else
-    (let ([p (grid->point i j)])
-	    (grid-set grid i j (sdf p))
-	    (run-sdf-iter
-       grid
-	     (+ 1 i)
-	     j)))))
-
 (define (run-sdf)
-  (run-sdf-iter grid 0 0))
+  (let lp ([i 0] [j 0])
+    (cond
+     ((= j NUM_Y) grid)
+     ((= i NUM_X) (lp 0 (+ j 1)))
+     (else
+      (let ([p (grid->point i j)])
+        (grid-set grid i j (sdf p))
+        (lp (+ 1 i) j))))))
