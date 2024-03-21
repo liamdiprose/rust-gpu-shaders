@@ -10,9 +10,9 @@
     (~> (length p)
         (- r)
         (abs)
-        (- r))))
+        (- (* r 0.3)))))
 
-(define sdf (disk 0.3))
+(define sdf (torus 0.3))
 
 (define (run-sdf)
   (let lp ([i 0] [j 0])
