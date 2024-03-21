@@ -2,21 +2,17 @@
 
 (define (disk r)
   (lambda (p)
-    (- (length p)
-       r)))
-
-;; pub fn torus(p: Vec2, r: Vec2) -> f32 {
-    ;; (p.length() - r.x).abs() - r.y
-; }
-;;
+    (~> (length p)
+        (- r))))
 
 (define (torus r)
   (lambda (p)
-    (- (abs (- length
-               (point-x p)))
-       (point-y p))))
+    (~> (length p)
+        (- r)
+        (abs)
+        (- r))))
 
-(define sdf (torus 0.5))
+(define sdf (disk 0.3))
 
 (define (run-sdf-iter grid i j)
   (cond
